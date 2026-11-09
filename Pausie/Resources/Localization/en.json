@@ -1,5 +1,6 @@
 {
   "menubar.title.break": "Break",
+  "menubar.accessibilityLabel": "Pausie",
 
   "menu.header.idle.title": "Pausie is resting",
   "menu.header.idle.subtitle": "Start when you are ready",

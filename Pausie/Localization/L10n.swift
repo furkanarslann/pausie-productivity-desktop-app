@@ -4,6 +4,7 @@ import os
 /// Every user-facing string key. Raw values are the flat, dotted keys of `Resources/Localization/<lang>.json`.
 enum L10nKey: String, CaseIterable, Sendable {
     case menubarTitleBreak = "menubar.title.break"
+    case menubarAccessibilityLabel = "menubar.accessibilityLabel"
 
     case menuHeaderIdleTitle = "menu.header.idle.title"
     case menuHeaderIdleSubtitle = "menu.header.idle.subtitle"

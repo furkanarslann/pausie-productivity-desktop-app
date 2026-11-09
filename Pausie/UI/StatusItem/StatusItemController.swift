@@ -35,7 +35,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         if let button = statusItem.button {
             button.image = PausieAsset.menuBarIcon()
             button.imagePosition = .imageLeading
-            button.setAccessibilityLabel(L10n.t(.noteWindowTitle))
+            button.setAccessibilityLabel(L10n.t(.menubarAccessibilityLabel))
         }
         observeSession()
     }
