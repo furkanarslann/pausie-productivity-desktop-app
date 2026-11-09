@@ -74,7 +74,7 @@ struct ThemeTests {
         }
         let icon = PausieAsset.menuBarIcon()
         #expect(icon?.isTemplate == true)
-        #expect(icon?.size.height == ControlMetrics.menuBarIconHeight)
+        #expect(icon?.size.height == Metrics.StatusItem.iconHeight)
     }
 
     @Test("Appearance preferences map to NSApp appearances")

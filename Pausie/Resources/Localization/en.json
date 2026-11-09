@@ -23,6 +23,7 @@
   "menu.item.quit": "Quit Pausie",
   "menu.recentNotes.caption": "Last 5 notes",
   "menu.recentNotes.empty": "No notes yet",
+  "menu.recentNotes.emptyNote": "Empty note",
 
   "noteWindow.title": "Pausie",
   "noteWindow.question": "Before you go, what should we remember?",
@@ -58,6 +59,7 @@
   "resume.savedAt": "Saved at {time} · read-only",
   "resume.copy.accessibilityLabel": "Copy note as markdown",
   "resume.copied": "Copied!",
+  "resume.emptyNote": "Nothing was noted this time.",
   "resume.action.close": "Close",
 
   "settings.window.title": "Settings",

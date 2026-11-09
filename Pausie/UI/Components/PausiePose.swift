@@ -24,7 +24,7 @@ enum PausieAsset {
     static func menuBarIcon() -> NSImage? {
         guard let source = NSImage(named: NSImage.Name(menuBarTemplateName)),
               let image = source.copy() as? NSImage else { return nil }
-        let height = ControlMetrics.menuBarIconHeight
+        let height = Metrics.StatusItem.iconHeight
         let aspect = source.size.height > 0 ? source.size.width / source.size.height : 1
         image.size = NSSize(width: (height * aspect).rounded(), height: height)
         image.isTemplate = true
@@ -32,17 +32,30 @@ enum PausieAsset {
     }
 }
 
-/// A pose sized by its largest dimension.
+/// A pose drawn aspect-fit in its Figma box. Pass only a width to let the height follow the aspect ratio.
 struct PausiePoseView: View {
     let pose: PausiePose
-    let size: CGFloat
+    var width: CGFloat
+    var height: CGFloat?
+
+    init(pose: PausiePose, size: CGSize) {
+        self.pose = pose
+        width = size.width
+        height = size.height
+    }
+
+    init(pose: PausiePose, width: CGFloat) {
+        self.pose = pose
+        self.width = width
+        height = nil
+    }
 
     var body: some View {
         pose.image
             .resizable()
             .interpolation(.high)
             .scaledToFit()
-            .frame(width: size, height: size)
+            .frame(width: width, height: height)
             .accessibilityHidden(true)
     }
 }

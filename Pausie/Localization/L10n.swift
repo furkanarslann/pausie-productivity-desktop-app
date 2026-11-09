@@ -27,6 +27,7 @@ enum L10nKey: String, CaseIterable, Sendable {
     case menuItemQuit = "menu.item.quit"
     case menuRecentNotesCaption = "menu.recentNotes.caption"
     case menuRecentNotesEmpty = "menu.recentNotes.empty"
+    case menuRecentNotesEmptyNote = "menu.recentNotes.emptyNote"
 
     case noteWindowTitle = "noteWindow.title"
     case noteWindowQuestion = "noteWindow.question"
@@ -62,6 +63,7 @@ enum L10nKey: String, CaseIterable, Sendable {
     case resumeSavedAt = "resume.savedAt"
     case resumeCopyAccessibilityLabel = "resume.copy.accessibilityLabel"
     case resumeCopied = "resume.copied"
+    case resumeEmptyNote = "resume.emptyNote"
     case resumeActionClose = "resume.action.close"
 
     case settingsWindowTitle = "settings.window.title"

@@ -44,14 +44,20 @@ enum Palette {
         }
     }
 
+    /// Shadow color of `Pausie/Window shadow`; the same in Light and Dark.
+    static let shadowInk: UInt32 = 0x2D1B4E
+
     static func rgb(_ token: ColorToken, dark: Bool) -> UInt32 {
         let pair = pair(for: token)
         return dark ? pair.dark : pair.light
     }
 
     static func nsColor(_ token: ColorToken, dark: Bool) -> NSColor {
-        let value = rgb(token, dark: dark)
-        return NSColor(
+        nsColor(rgb: rgb(token, dark: dark))
+    }
+
+    static func nsColor(rgb value: UInt32) -> NSColor {
+        NSColor(
             srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
             green: CGFloat((value >> 8) & 0xFF) / 255,
             blue: CGFloat(value & 0xFF) / 255,
@@ -64,17 +70,21 @@ enum Palette {
 enum OpacityToken {
     /// Break layer dim (overlay/dim at 45%).
     static let breakDim: Double = 0.45
+    /// Strength of the light backdrop blur under the break dim (Figma: 5pt blur).
+    static let breakBlur: Double = 0.5
     /// Skip-confirmation scrim on top of the break card (overlay/dim at 30%).
     static let skipScrim: Double = 0.30
     /// Note editor border (brand/lavender at 50%).
     static let editorBorder: Double = 0.5
     /// Placeholder text (text/secondary at 60%).
     static let placeholder: Double = 0.6
-    /// Disabled controls.
-    static let disabled: Double = 0.45
-    /// Window shadow layers (brand/ink).
+    /// Disabled controls: the whole control at 40%.
+    static let disabled: Double = 0.40
+    /// Window shadow layers.
     static let shadowLarge: Double = 0.16
     static let shadowSmall: Double = 0.08
+    /// Selected segment shadow.
+    static let segmentShadow: Double = 0.12
 }
 
 extension NSColor {
@@ -89,6 +99,11 @@ extension Color {
     init(_ token: ColorToken) {
         self.init(nsColor: .pausie(token))
     }
+}
+
+extension Color {
+    /// Fixed shadow ink (not mode-dependent).
+    static let shadowInk = Color(nsColor: Palette.nsColor(rgb: Palette.shadowInk))
 }
 
 extension ShapeStyle where Self == Color {

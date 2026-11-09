@@ -34,6 +34,8 @@ enum TypographyToken: CaseIterable, Sendable {
     case bodyEmphasis
     case caption
     case menu
+    /// Status item countdown (desktop component in Figma: SF Pro Text Semibold 13).
+    case menuBarTitle
 
     struct Spec: Equatable, Sendable {
         let family: FontFamilyToken
@@ -53,6 +55,7 @@ enum TypographyToken: CaseIterable, Sendable {
         case .bodyEmphasis: Spec(family: .text, size: 14, lineHeight: 20, weight: .semibold)
         case .caption: Spec(family: .text, size: 12, lineHeight: 16, weight: .regular)
         case .menu: Spec(family: .text, size: 13, lineHeight: 18, weight: .regular)
+        case .menuBarTitle: Spec(family: .text, size: 13, lineHeight: 18, weight: .semibold, monospacedDigits: true)
         }
     }
 

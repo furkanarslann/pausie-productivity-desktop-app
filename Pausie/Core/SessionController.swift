@@ -106,7 +106,13 @@ final class SessionController {
         state == .onBreak ? breakDeadline : nil
     }
 
-    /// Elapsed share of the break, 0...1, for the progress bar.
+    /// Elapsed share of the work block, 0...1, for the menu header progress bar.
+    var workProgress: Double? {
+        guard let workRemaining, cycleSettings.workDuration > 0 else { return nil }
+        return min(1, max(0, 1 - workRemaining / cycleSettings.workDuration))
+    }
+
+    /// Elapsed share of the break, 0...1.
     var breakProgress: Double {
         switch state {
         case .onBreak:
