@@ -4,6 +4,10 @@ Every intentional difference from the *Pausie MVP Spec*, the *MVP Implementation
 file, with when it was decided, who asked for it, why, and the commit that made it. The current behavior
 as a whole is in [FLOW.md](FLOW.md).
 
+The *Pausie MVP Spec* doc was brought in line with D1–D13 on 2026-11-10 (states, transitions T1–T15,
+rules, screens, the state diagram, and a "Kararlar (4. tur, uygulama sırasında)" section). Keep both in
+step: a new decision goes here and into the spec.
+
 Add an entry whenever behavior changes on purpose: newest at the bottom, one entry per decision, and
 mark entries that a later decision replaced instead of deleting them.
 
