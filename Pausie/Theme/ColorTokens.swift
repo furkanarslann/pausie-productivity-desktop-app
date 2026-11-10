@@ -72,6 +72,10 @@ enum OpacityToken {
     static let breakDim: Double = 0.45
     /// Strength of the light backdrop blur under the break dim (Figma: 5pt blur).
     static let breakBlur: Double = 0.5
+    /// Focus ring around the note editor (brand/lavender at 35%).
+    static let focusRing: Double = 0.35
+    /// Break ring track (brand/lavender at 30%).
+    static let ringTrack: Double = 0.30
     /// Skip-confirmation scrim on top of the break card (overlay/dim at 30%).
     static let skipScrim: Double = 0.30
     /// Note editor border (brand/lavender at 50%).

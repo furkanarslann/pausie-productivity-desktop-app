@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Shows the note window: an `NSPanel` at the top right that can be minimized but not closed (rule 4).
-/// In pending mode it appears without stealing focus from the app the user is working in.
+/// Shows the note window: an `NSPanel` centered on the main display (screen 03b) that can be minimized
+/// but not closed (rule 4). It opens with the editor focused so the user can type right away.
 @MainActor
 final class NoteWindowController {
     private let session: SessionController
@@ -20,17 +20,11 @@ final class NoteWindowController {
         let hosting = NSHostingController(rootView: NoteWindowView(session: session, mode: mode))
         hosting.sizingOptions = .preferredContentSize
         panel.contentViewController = hosting
-        panel.pinToTopRight(contentSize: hosting.view.fittingSize, inset: Metrics.NoteWindow.screenInset)
+        panel.centerOnMainScreen(contentSize: hosting.view.fittingSize)
 
         if panel.isMiniaturized { panel.deminiaturize(nil) }
-        switch mode {
-        case .pending:
-            // Don't take the keyboard away mid-typing; the user clicks in when ready.
-            panel.orderFrontRegardless()
-        case .edit:
-            // Opened on purpose from the menu: ready to type.
-            panel.makeKeyAndOrderFront(nil)
-        }
+        // A non-activating panel takes the keyboard without bringing Pausie (or its menu bar) forward.
+        panel.makeKeyAndOrderFront(nil)
     }
 
     func close() {

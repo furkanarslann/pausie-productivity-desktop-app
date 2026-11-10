@@ -95,9 +95,10 @@ The guide's proposals were used as defaults; change them here and in the spec if
 - **Menu chrome is native.** The status menu is an `NSMenu` (as the guide decides) with a SwiftUI
   status header, so the menu background and highlighted row use the system look rather than the
   custom Figma popover (radius 10, `brand/primary` highlight).
-- **Note window focus.** In pending mode (T2) the note window appears without taking the keyboard
-  from the app you're typing in; click into it when ready. "Edit note" opens it ready to type.
-  `⌘Return` saves (the primary button).
+- **Note window (03b).** Centered on the main display, 600 pt wide, and it takes the keyboard when it
+  opens so you can type right away (it's a non-activating panel, so Pausie doesn't come to the front).
+  `⌘Return` saves (the primary button). The break note-required card (04) stays centered on the break layer.
+- **Break ring (05).** The relaxed pose sits in a ring whose `brand/primary` arc shows the time left.
 - **Note editor.** Each todo is its own line: Return adds a todo (not from an empty one), Backspace in an empty todo removes it
   (caret moves to the end of the one above), ↑/↓ move between todos. Empty todos are dropped on save
   wherever they are, so a cleared item never comes back as an empty checkbox.

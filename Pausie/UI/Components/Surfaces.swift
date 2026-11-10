@@ -43,17 +43,41 @@ struct HairlineDivider: View {
     }
 }
 
-/// Note editor box: `surface/canvas`, 1pt `brand/lavender` stroke, radius 12.
+/// Note editor box: `surface/canvas` fill, radius 12. Unfocused: 1pt `brand/lavender` border.
+/// Focused (03b): 1.5pt `brand/primary` border and a 4pt `brand/lavender` ring at 35% around it.
 struct EditorBox<Content: View>: View {
+    var style: Metrics.Editor.Style = Metrics.Editor.compact
+    var isFocused = false
+    var onTapBackground: (() -> Void)?
     @ViewBuilder let content: Content
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+        let ringShape = RoundedRectangle(cornerRadius: Radius.md + Metrics.Editor.focusRingWidth, style: .continuous)
         content
-            .padding(.vertical, Metrics.Editor.verticalPadding)
-            .padding(.horizontal, Metrics.Editor.horizontalPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(style.padding)
+            .frame(maxWidth: .infinity, minHeight: style.minHeight, alignment: .topLeading)
+            .background {
+                if let onTapBackground {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: onTapBackground)
+                        .accessibilityHidden(true)
+                }
+            }
             .background(shape.fill(Color(.surfaceCanvas)))
-            .overlay(shape.strokeBorder(Color(.brandLavender), lineWidth: BorderWidth.hairline))
+            .overlay(
+                shape.strokeBorder(
+                    Color(isFocused ? .brandPrimary : .brandLavender),
+                    lineWidth: isFocused ? Metrics.Editor.focusedBorderWidth : BorderWidth.hairline
+                )
+            )
+            .background {
+                if isFocused {
+                    ringShape
+                        .fill(Color(.brandLavender).opacity(OpacityToken.focusRing))
+                        .padding(-Metrics.Editor.focusRingWidth)
+                }
+            }
     }
 }

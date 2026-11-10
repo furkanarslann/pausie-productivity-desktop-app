@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Screen 03. Pending mode (T2) has two buttons; edit mode (T8) has only Save.
+/// Screen 03b: centered on the main display, editor focused on open.
+/// Pending mode (T2) has two buttons; edit mode (T8) has only Save.
 struct NoteWindowView: View {
     @Bindable var session: SessionController
     let mode: NoteWindowMode
@@ -8,7 +9,7 @@ struct NoteWindowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.NoteWindow.contentSpacing) {
             header
-            TodoEditor(markdown: $session.draft, placeholder: L10n.t(.noteWindowPlaceholder))
+            TodoEditor(markdown: $session.draft, placeholder: L10n.t(.noteWindowPlaceholder), style: Metrics.Editor.roomy)
             Text(L10n.t(.noteWindowHint))
                 .typography(.caption)
                 .foregroundStyle(Color(.textSecondary))
@@ -24,7 +25,7 @@ struct NoteWindowView: View {
             PausiePoseView(pose: .takingNotes, size: Metrics.NoteWindow.poseSize)
             VStack(alignment: .leading, spacing: Metrics.NoteWindow.headerTextSpacing) {
                 Text(L10n.t(.noteWindowQuestion))
-                    .typography(.headline)
+                    .typography(.title)
                     .foregroundStyle(Color(.textPrimary))
                     .fixedSize(horizontal: false, vertical: true)
                 if let remaining = session.workRemaining {

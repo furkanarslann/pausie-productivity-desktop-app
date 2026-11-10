@@ -7,13 +7,21 @@ import SwiftUI
 struct TodoEditor: View {
     @Binding var markdown: String
     let placeholder: String
+    var style: Metrics.Editor.Style = Metrics.Editor.compact
 
     @State private var model = TodoEditorModel(markdown: "")
     @State private var focus: TodoEditorModel.Focus?
+    /// The row whose field has keyboard focus, for the focused border.
+    @State private var editingRowID: UUID?
 
     var body: some View {
-        EditorBox {
-            VStack(alignment: .leading, spacing: Metrics.Editor.rowSpacing) {
+        EditorBox(
+            style: style,
+            isFocused: editingRowID != nil,
+            // Clicking the empty part of the editor continues the last todo.
+            onTapBackground: { focus = TodoEditorModel.Focus(rowID: model.lastRowID, caret: .end) }
+        ) {
+            VStack(alignment: .leading, spacing: style.rowSpacing) {
                 ForEach(model.rows) { row in
                     rowView(row)
                 }
@@ -40,6 +48,13 @@ struct TodoEditor: View {
                 onCommand: { handle($0, in: row.id) },
                 onFocusApplied: {
                     if focus?.rowID == row.id { focus = nil }
+                },
+                onFocusChange: { focused in
+                    if focused {
+                        editingRowID = row.id
+                    } else if editingRowID == row.id {
+                        editingRowID = nil
+                    }
                 }
             )
             .frame(minHeight: TypographyToken.body.spec.lineHeight)

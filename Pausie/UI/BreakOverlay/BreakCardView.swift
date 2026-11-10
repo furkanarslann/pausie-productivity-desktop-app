@@ -47,7 +47,7 @@ struct BreakCardView: View {
 
     private var running: some View {
         VStack(spacing: Metrics.BreakCard.spacing) {
-            PausiePoseView(pose: .relaxed, size: Metrics.BreakCard.relaxedPoseSize)
+            BreakRing(progress: session.breakProgress)
             PausieBubble(text: L10n.t(.breakBubble))
             Text(TimeFormat.countdown(session.breakRemaining ?? 0))
                 .typography(.timer)

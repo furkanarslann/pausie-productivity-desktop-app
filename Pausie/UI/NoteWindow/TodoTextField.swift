@@ -22,13 +22,17 @@ struct TodoTextField: NSViewRepresentable {
     /// Returns `true` if the command was handled; otherwise the field editor does its default.
     let onCommand: (Command) -> Bool
     let onFocusApplied: () -> Void
+    /// The field started (`true`) or stopped editing; drives the editor's focused style.
+    var onFocusChange: (Bool) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
 
     func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField()
+        let field = FocusReportingTextField()
+        let coordinator = context.coordinator
+        field.onBecomeFirstResponder = { [weak coordinator] in coordinator?.reportFocus(true) }
         field.isBordered = false
         field.isBezeled = false
         field.drawsBackground = false
@@ -95,6 +99,15 @@ struct TodoTextField: NSViewRepresentable {
             }
         }
 
+        /// Deferred so a focus change during a SwiftUI update (e.g. a row being removed) doesn't mutate state mid-update.
+        func reportFocus(_ focused: Bool) {
+            Task { @MainActor [weak self] in self?.parent.onFocusChange(focused) }
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            reportFocus(false)
+        }
+
         func controlTextDidChange(_ notification: Notification) {
             guard let field = notification.object as? NSTextField else { return }
             parent.text = field.stringValue
@@ -116,5 +129,16 @@ struct TodoTextField: NSViewRepresentable {
                 return false
             }
         }
+    }
+}
+
+/// Tells the editor when the field takes keyboard focus (the end is reported by the delegate).
+private final class FocusReportingTextField: NSTextField {
+    var onBecomeFirstResponder: (() -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { onBecomeFirstResponder?() }
+        return accepted
     }
 }

@@ -71,10 +71,20 @@ enum Metrics {
     }
 
     /// Note editor box (screens 03, 04).
+    /// Note editor box. `compact` is the break card editor (screen 04); `roomy` is the centered
+    /// note window editor (screen 03b).
     enum Editor {
-        static let verticalPadding: CGFloat = 12
-        static let horizontalPadding: CGFloat = 14
-        static let rowSpacing: CGFloat = 2
+        struct Style: Equatable, Sendable {
+            let padding: EdgeInsets
+            let rowSpacing: CGFloat
+            let minHeight: CGFloat?
+        }
+
+        static let compact = Style(padding: EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14), rowSpacing: 2, minHeight: nil)
+        static let roomy = Style(padding: EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16), rowSpacing: 4, minHeight: 190)
+        /// Focused editor: 1.5pt `brand/primary` border plus a 4pt `brand/lavender` ring outside it.
+        static let focusedBorderWidth: CGFloat = 1.5
+        static let focusRingWidth: CGFloat = 4
     }
 
     enum Bubble {
@@ -104,16 +114,15 @@ enum Metrics {
     }
 
     /// Screen 03.
+    /// Screen 03b: centered on the main display.
     enum NoteWindow {
-        static let width: CGFloat = 460
-        static let contentPadding = EdgeInsets(top: 4, leading: 20, bottom: 20, trailing: 20)
-        static let contentSpacing: CGFloat = 16
-        static let headerSpacing: CGFloat = 14
-        static let headerTextSpacing: CGFloat = 4
-        static let poseSize = CGSize(width: 92, height: 95)
+        static let width: CGFloat = 600
+        static let contentPadding = EdgeInsets(top: 8, leading: 28, bottom: 24, trailing: 28)
+        static let contentSpacing: CGFloat = 18
+        static let headerSpacing: CGFloat = 18
+        static let headerTextSpacing: CGFloat = 6
+        static let poseSize = CGSize(width: 120, height: 125)
         static let actionSpacing: CGFloat = 10
-        /// Distance from the right edge and from the menu bar.
-        static let screenInset = CGSize(width: 20, height: 12)
     }
 
     /// Screens 04, 05, 07.
@@ -125,7 +134,12 @@ enum Metrics {
         static let spacing: CGFloat = 12
         static let buttonTopSpacer: CGFloat = 4
         static let requiredPoseSize = CGSize(width: 150, height: 156)
-        static let relaxedPoseSize = CGSize(width: 176, height: 197)
+        /// Break ring (screen 05): the remaining-time arc around the relaxed pose.
+        static let ringSize: CGFloat = 232
+        static let ringDiameter: CGFloat = 216
+        static let ringLineWidth: CGFloat = 8
+        static let ringPoseSize = CGSize(width: 150, height: 168)
+        static let ringPoseOffsetY: CGFloat = 4
         static let backToWorkPoseSize = CGSize(width: 180, height: 207)
         static let chipSpacing: CGFloat = 6
         static let chipPadding = EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)

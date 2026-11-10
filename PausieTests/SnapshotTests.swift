@@ -113,5 +113,13 @@ struct SnapshotTests {
             TodoRow(text: "Done thing", checked: true)
             PausieBubble(text: "Take a real break. I have your note.")
         })
+        try render("components-editor-focused", EditorBox(style: Metrics.Editor.roomy, isFocused: true) {
+            VStack(alignment: .leading, spacing: Metrics.Editor.roomy.rowSpacing) {
+                TodoRow(text: "Finish validation on the login screen")
+                TodoRow(text: "Reply to PR review comments")
+                TodoRow(text: "Check the API error states")
+            }
+        }
+        .frame(width: Metrics.NoteWindow.width - Metrics.NoteWindow.contentPadding.leading - Metrics.NoteWindow.contentPadding.trailing))
     }
 }

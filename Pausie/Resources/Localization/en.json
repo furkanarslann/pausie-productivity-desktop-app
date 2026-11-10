@@ -30,7 +30,7 @@
   "noteWindow.question": "Before you go, what should we remember?",
   "noteWindow.countdown": "Break starts in {remaining}. Keep working if you like.",
   "noteWindow.placeholder": "Next step…",
-  "noteWindow.hint": "Saved as markdown todos. Press Return for a new line.",
+  "noteWindow.hint": "Saved as markdown todos. Return adds a line, Backspace on an empty line removes it.",
   "noteWindow.action.saveAndContinue": "Save & keep working",
   "noteWindow.action.saveAndBreak": "Save & take a break",
   "noteWindow.action.save": "Save",
