@@ -68,7 +68,10 @@ struct TodoEditor: View {
         case .moveDown:
             newFocus = model.neighbor(of: rowID, offset: 1)
         }
-        guard let newFocus else { return false }
+        guard let newFocus else {
+            // Return in an empty todo is swallowed, so the field editor doesn't end editing or select the row.
+            return command == .newline
+        }
         apply(newFocus)
         return true
     }

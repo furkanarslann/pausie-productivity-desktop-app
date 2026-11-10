@@ -137,6 +137,21 @@ struct TodoEditorModelTests {
         #expect(focus == TodoEditorModel.Focus(rowID: model.rows[1].id, caret: .end))
     }
 
+    @Test("Return in an empty or blank todo doesn't add a line")
+    func returnInEmptyRow() {
+        var model = model(["a", ""])
+        #expect(model.insertRow(after: model.rows[1].id) == nil)
+        #expect(model.rows.map(\.text) == ["a", ""])
+
+        var blank = self.model(["   "])
+        #expect(blank.insertRow(after: blank.rows[0].id) == nil)
+        #expect(blank.rows.count == 1)
+
+        var fresh = TodoEditorModel(markdown: "")
+        #expect(fresh.insertRow(after: fresh.rows[0].id) == nil)
+        #expect(fresh.markdown == TodoMarkdown.template)
+    }
+
     @Test("Backspace in a cleared middle todo removes it; the caret goes to the end of the row above")
     func deleteMiddle() {
         var model = model(["first", "second", "third"])

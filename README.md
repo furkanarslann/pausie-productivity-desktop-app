@@ -98,7 +98,7 @@ The guide's proposals were used as defaults; change them here and in the spec if
 - **Note window focus.** In pending mode (T2) the note window appears without taking the keyboard
   from the app you're typing in; click into it when ready. "Edit note" opens it ready to type.
   `⌘Return` saves (the primary button).
-- **Note editor.** Each todo is its own line: Return adds a todo, Backspace in an empty todo removes it
+- **Note editor.** Each todo is its own line: Return adds a todo (not from an empty one), Backspace in an empty todo removes it
   (caret moves to the end of the one above), ↑/↓ move between todos. Empty todos are dropped on save
   wherever they are, so a cleared item never comes back as an empty checkbox.
 - **"Welcome back!" panel closes itself after 15 s** (`SessionRules.resumePanelAutoCloseDelay`); the

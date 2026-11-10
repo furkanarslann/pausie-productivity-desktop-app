@@ -49,9 +49,11 @@ nonisolated struct TodoEditorModel: Equatable, Sendable {
         return normalize()
     }
 
-    /// Return: a new empty row right below.
+    /// Return: a new empty row right below. Nothing happens in an empty (or blank) row,
+    /// so Return can't stack up empty todos.
     mutating func insertRow(after id: UUID) -> Focus? {
-        guard let index = index(of: id) else { return nil }
+        guard let index = index(of: id),
+              !rows[index].text.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
         let row = Row(text: "")
         rows.insert(row, at: index + 1)
         return Focus(rowID: row.id, caret: .end)
