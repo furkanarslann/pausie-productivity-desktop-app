@@ -44,12 +44,14 @@ struct HairlineDivider: View {
 }
 
 /// Note editor box: `surface/canvas` fill, radius 12. Unfocused: 1pt `brand/lavender` border.
-/// Focused (03b): 1.5pt `brand/primary` border and a 4pt `brand/lavender` ring at 35% around it.
+/// Focused (03b): 1.5pt `brand/primary` border (2px at 1x) and a 4pt `brand/lavender` ring at 35% around it.
 struct EditorBox<Content: View>: View {
     var style: Metrics.Editor.Style = Metrics.Editor.compact
     var isFocused = false
     var onTapBackground: (() -> Void)?
     @ViewBuilder let content: Content
+
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
@@ -69,7 +71,7 @@ struct EditorBox<Content: View>: View {
             .overlay(
                 shape.strokeBorder(
                     Color(isFocused ? .brandPrimary : .brandLavender),
-                    lineWidth: isFocused ? Metrics.Editor.focusedBorderWidth : BorderWidth.hairline
+                    lineWidth: isFocused ? Metrics.Editor.focusedBorderWidth.resolved(forScale: displayScale) : BorderWidth.hairline
                 )
             )
             .background {

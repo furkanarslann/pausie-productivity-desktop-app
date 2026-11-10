@@ -37,7 +37,8 @@ locally; set your team in *Signing & Capabilities* if you want a stable signatur
 
 ### Visual snapshots
 
-Every screen can be rendered offscreen in light and dark for comparison with Figma:
+Every screen can be rendered offscreen in light and dark for comparison with Figma, at Retina (2x)
+and at 1x (files ending in `-1x`, as on a 1080p monitor):
 
 ```bash
 TEST_RUNNER_PAUSIE_SNAPSHOT_DIR=/tmp/pausie-snapshots xcodebuild -project Pausie.xcodeproj -scheme Pausie -derivedDataPath build/DerivedData test -only-testing:PausieTests/SnapshotTests

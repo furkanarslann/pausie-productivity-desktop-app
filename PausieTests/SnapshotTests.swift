@@ -3,7 +3,8 @@ import SwiftUI
 import Testing
 @testable import Pausie
 
-/// Renders every screen in light and dark to PNG for visual review against Figma.
+/// Renders every screen in light and dark to PNG for visual review against Figma, at Retina (2x) and
+/// at 1x (`-1x` suffix), since thin strokes can look right on one and wrong on the other.
 /// Runs only when `PAUSIE_SNAPSHOT_DIR` is set, e.g.
 /// `TEST_RUNNER_PAUSIE_SNAPSHOT_DIR=/tmp/pausie-snapshots xcodebuild test …`
 @Suite("Snapshots", .enabled(if: ProcessInfo.processInfo.environment["PAUSIE_SNAPSHOT_DIR"] != nil))
@@ -14,22 +15,25 @@ struct SnapshotTests {
     private func render(_ name: String, _ view: some View) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for dark in [false, true] {
-            let appearance = try #require(NSAppearance(named: dark ? .darkAqua : .aqua))
-            var data: Data?
-            appearance.performAsCurrentDrawingAppearance {
-                let content = view
-                    .padding(48)
-                    .background(Color(.surfaceCanvas))
-                    .environment(\.colorScheme, dark ? .dark : .light)
-                let renderer = ImageRenderer(content: content)
-                renderer.scale = 2
-                if let image = renderer.nsImage, let tiff = image.tiffRepresentation,
-                   let rep = NSBitmapImageRep(data: tiff) {
-                    data = rep.representation(using: .png, properties: [:])
+            for scale in [2.0, 1.0] {
+                let appearance = try #require(NSAppearance(named: dark ? .darkAqua : .aqua))
+                var data: Data?
+                appearance.performAsCurrentDrawingAppearance {
+                    let content = view
+                        .padding(48)
+                        .background(Color(.surfaceCanvas))
+                        .environment(\.colorScheme, dark ? .dark : .light)
+                        .environment(\.displayScale, scale)
+                    let renderer = ImageRenderer(content: content)
+                    renderer.scale = scale
+                    if let image = renderer.cgImage {
+                        data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
+                    }
                 }
+                let suffix = scale == 1 ? "-1x" : ""
+                let file = directory.appending(path: "\(name)-\(dark ? "dark" : "light")\(suffix).png")
+                try #require(data).write(to: file)
             }
-            let file = directory.appending(path: "\(name)-\(dark ? "dark" : "light").png")
-            try #require(data).write(to: file)
         }
     }
 

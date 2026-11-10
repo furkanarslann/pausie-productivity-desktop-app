@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Figma `Button`: Primary, Secondary, Ghost; Disabled = the whole button at 40%.
+/// Secondary also has a 1pt `brand/lavender` edge at 50%, which Figma doesn't have (D14).
 struct PausieButtonStyle: ButtonStyle {
     enum Variant {
         case primary
@@ -32,8 +33,20 @@ private struct PausieButtonBody: View {
             .frame(maxWidth: fullWidth ? .infinity : nil)
             .frame(height: Metrics.Button.height)
             .background(RoundedRectangle(cornerRadius: Radius.sm).fill(background))
+            .overlay {
+                if let border {
+                    RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(border, lineWidth: BorderWidth.hairline)
+                }
+            }
             .contentShape(RoundedRectangle(cornerRadius: Radius.sm))
             .opacity(opacity)
+    }
+
+    private var border: Color? {
+        switch variant {
+        case .secondary: Color(.brandLavender).opacity(OpacityToken.secondaryButtonBorder)
+        case .primary, .ghost: nil
+        }
     }
 
     private var foreground: Color {

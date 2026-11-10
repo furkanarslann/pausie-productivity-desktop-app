@@ -109,3 +109,17 @@ technical choice made while building, within the spec's intent.
 - **Supersedes:** Spec T4 and the note window's two buttons ("Save & keep working", "Save & take a break").
 - **Note:** An interim version in `86b33c6` had removed "Save & keep working", the saved-note state,
   "Take a break now" and "Edit note"; this decision restored them in the form above.
+
+### D14 · Crisp strokes on 1x displays; an edge on secondary buttons
+- **Date:** 2026-11-10 · **Requested by:** Furkan (light mode on a 27" 1080p monitor) · **Commit:** the
+  commit that mentions D14 (`git log --grep D14`)
+- **Decision:**
+  - The focused note editor border and the todo checkbox stroke (Figma: 1.5pt) are drawn in whole
+    pixels: unchanged on Retina (3px), 2px and 1px on a 1x display (`StrokeWidth` in `Metrics.swift`).
+  - Secondary buttons ("Ask me later", "Skip break") have a 1pt `brand/lavender` edge at 50% on every
+    display, in light and dark.
+- **Supersedes:** Figma's 1.5pt strokes on 1x displays, and Figma `Button / Secondary` (no edge).
+- **Why:** On a 1x display a 1.5pt line falls between pixels. It blurred and came out 1px on the top
+  and left but 2px on the bottom and right, which looked like a double frame next to the focus ring.
+  The pale secondary fill had almost no contrast against the white window, so the button looked washed
+  out. Furkan chose the edge over a darker fill from 1x mockups.

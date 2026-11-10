@@ -26,7 +26,22 @@ enum Radius {
 /// Border widths.
 enum BorderWidth {
     static let hairline: CGFloat = 1
-    static let checkbox: CGFloat = 1.5
+    /// Figma: 1.5pt. 1px on a 1x display.
+    static let checkbox = StrokeWidth(retina: 1.5, standard: 1)
+}
+
+/// A stroke width that lands on whole device pixels. Figma's 1.5pt strokes are 3px on Retina, but on a
+/// 1x display they fall between pixels: they blur and come out thicker on one side. Views resolve it
+/// with `@Environment(\.displayScale)`, which follows the screen the window is on.
+struct StrokeWidth: Equatable, Sendable {
+    /// Width on Retina (2x) displays, as in Figma.
+    let retina: CGFloat
+    /// Width on 1x displays: a whole number of pixels.
+    let standard: CGFloat
+
+    func resolved(forScale scale: CGFloat) -> CGFloat {
+        scale >= 2 ? retina : standard
+    }
 }
 
 /// `Pausie/Window shadow`: y 18, blur 44, ink 16% + y 2, blur 6, ink 8%. Not mode-dependent.
@@ -82,8 +97,9 @@ enum Metrics {
 
         static let compact = Style(padding: EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14), rowSpacing: 2, minHeight: nil)
         static let roomy = Style(padding: EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16), rowSpacing: 4, minHeight: 190)
-        /// Focused editor: 1.5pt `brand/primary` border plus a 4pt `brand/lavender` ring outside it.
-        static let focusedBorderWidth: CGFloat = 1.5
+        /// Focused editor: 1.5pt `brand/primary` border (2px on a 1x display, so it stays bolder than
+        /// the 1px unfocused border) plus a 4pt `brand/lavender` ring outside it.
+        static let focusedBorderWidth = StrokeWidth(retina: 1.5, standard: 2)
         static let focusRingWidth: CGFloat = 4
     }
 

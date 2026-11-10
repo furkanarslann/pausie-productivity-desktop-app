@@ -80,6 +80,8 @@ enum OpacityToken {
     static let skipScrim: Double = 0.30
     /// Note editor border (brand/lavender at 50%).
     static let editorBorder: Double = 0.5
+    /// Secondary button edge (brand/lavender at 50%), so the pale fill reads against white (D14).
+    static let secondaryButtonBorder: Double = 0.5
     /// Placeholder text (text/secondary at 60%).
     static let placeholder: Double = 0.6
     /// Disabled controls: the whole control at 40%.

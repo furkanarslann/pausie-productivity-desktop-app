@@ -1,15 +1,20 @@
 import SwiftUI
 
-/// Figma `Todo row` checkbox: 16x16, radius 5, 1.5pt lavender stroke. Read-only.
+/// Figma `Todo row` checkbox: 16x16, radius 5, 1.5pt lavender stroke (1px at 1x). Read-only.
 struct TodoCheckbox: View {
     var checked = false
+
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         RoundedRectangle(cornerRadius: Radius.checkbox)
             .fill(checked ? Color(.brandPrimary) : Color(.surfaceWindow))
             .overlay {
                 RoundedRectangle(cornerRadius: Radius.checkbox)
-                    .strokeBorder(checked ? Color(.brandPrimary) : Color(.brandLavender), lineWidth: BorderWidth.checkbox)
+                    .strokeBorder(
+                        checked ? Color(.brandPrimary) : Color(.brandLavender),
+                        lineWidth: BorderWidth.checkbox.resolved(forScale: displayScale)
+                    )
             }
             .overlay {
                 if checked {
