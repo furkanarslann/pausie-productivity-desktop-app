@@ -44,6 +44,17 @@ TEST_RUNNER_PAUSIE_SNAPSHOT_DIR=/tmp/pausie-snapshots xcodebuild -project Pausie
 `ImageRenderer` can't draw AppKit-backed controls, so text fields in the note editors appear as
 yellow placeholders in the PNGs; everything else renders as in the app.
 
+### Window tests
+
+Tests that open the real panels on screen (resume panel with long wrapped notes, note window growth,
+settings) are opt-in because windows flash on screen while they run:
+
+```bash
+TEST_RUNNER_PAUSIE_WINDOW_TESTS=1 xcodebuild -project Pausie.xcodeproj -scheme Pausie -derivedDataPath build/DerivedData test -only-testing:PausieTests/WindowTests
+```
+
+Add `TEST_RUNNER_PAUSIE_REPRO_NOTES=/path/to/notes.json` to also open every note from a notes file.
+
 ## Project layout
 
 | Folder | Contents |
@@ -105,6 +116,11 @@ The guide's proposals were used as defaults; change them here and in the spec if
 - **"Welcome back!" panel closes itself after 15 s** (`SessionRules.resumePanelAutoCloseDelay`); the
   countdown pauses while the pointer is over it. The note stays in Recent notes. This replaces the
   spec's "stays until closed" (rule 8); it still also closes at the next warning.
+- **Window sizing.** Panels follow their SwiftUI content's height without AppKit's
+  `.preferredContentSize` sizing (`PanelSizing.swift`): sized once on open, then only when the height
+  changes by a whole point, on the next run loop turn. The AppKit-driven sizing crashed when a note with
+  long wrapped lines was opened from Recent notes on a 1x display (a fractional height that AppKit kept
+  rounding fed a resize-layout loop until the stack overflowed).
 - **T6/T7 also close the note window**, so an open "Edit note" window can't sit above the break.
 - **Backdrop blur** under the 45% dim is an `NSVisualEffectView` at half strength, approximating
   Figma's 5 pt blur; tune `OpacityToken.breakBlur` after seeing it on screen.

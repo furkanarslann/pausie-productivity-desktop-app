@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Pausie
@@ -243,5 +244,49 @@ struct AutoCloseTimerTests {
     @Test("The Welcome back panel closes after 15 s")
     func delay() {
         #expect(SessionRules.resumePanelAutoCloseDelay == 15)
+    }
+}
+
+@Suite("Panel sizing")
+struct PanelSizingTests {
+    @Test("Heights are whole points, finite and capped at the screen")
+    func clampedHeight() {
+        #expect(PanelSizing.clampedHeight(220.2, maxHeight: 900) == 221)
+        #expect(PanelSizing.clampedHeight(.greatestFiniteMagnitude, maxHeight: 900) == 900)
+        #expect(PanelSizing.clampedHeight(.infinity, maxHeight: 900) == 0)
+        #expect(PanelSizing.clampedHeight(.nan, maxHeight: 900) == 0)
+        #expect(PanelSizing.clampedHeight(-5, maxHeight: 900) == 0)
+    }
+}
+
+@Suite("Panel resizing")
+@MainActor
+struct PanelResizingTests {
+    private func makePanel(height: CGFloat) -> TopAnchoredPanel {
+        TopAnchoredPanel(
+            contentRect: NSRect(x: 100, y: 100, width: 380, height: height),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: true
+        )
+    }
+
+    @Test("Fractional heights that round to the current height don't resize the window")
+    func ignoresSubPointChanges() {
+        // The old loop: AppKit shows 288, SwiftUI keeps asking for 287.5.
+        let panel = makePanel(height: 288)
+        panel.setContentHeightIfNeeded(287.5)
+        panel.setContentHeightIfNeeded(287.01)
+        panel.setContentHeightIfNeeded(288)
+        #expect(panel.contentRect(forFrameRect: panel.frame).height == 288)
+    }
+
+    @Test("Real changes resize to whole points")
+    func roundsUp() {
+        let panel = makePanel(height: 200)
+        panel.setContentHeightIfNeeded(287.5)
+        #expect(panel.contentRect(forFrameRect: panel.frame).height == 288)
+        panel.setContentHeightIfNeeded(.infinity)
+        #expect(panel.contentRect(forFrameRect: panel.frame).height == 288)
     }
 }

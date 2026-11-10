@@ -11,6 +11,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.store = store
     }
 
+    var frame: NSRect? { window?.frame }
+
     func show() {
         if let window {
             NSApp.activate()
@@ -32,10 +34,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.delegate = self
 
         // A fresh view each time so unsaved stepper values are dropped on Cancel / close.
-        let hosting = NSHostingController(rootView: SettingsView(store: store) { [weak self] in self?.close() })
-        hosting.sizingOptions = .preferredContentSize
-        window.contentViewController = hosting
-        window.setContentSize(hosting.view.fittingSize)
+        let view = SettingsView(store: store) { [weak self] in self?.close() }
+        let (_, size) = window.hostSizedContent(view, width: Metrics.Settings.width)
+        window.setContentSize(size)
         window.center()
 
         self.window = window

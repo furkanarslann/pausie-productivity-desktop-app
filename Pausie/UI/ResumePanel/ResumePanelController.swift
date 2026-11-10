@@ -15,6 +15,7 @@ final class ResumePanelController {
     }
 
     var isVisible: Bool { panel?.isVisible == true }
+    var frame: NSRect? { panel?.frame }
 
     func show(note: Note) {
         let panel = panel ?? makePanel()
@@ -27,10 +28,8 @@ final class ResumePanelController {
                 if hovering { autoClose.pause() } else { autoClose.resume() }
             }
         )
-        let hosting = NSHostingController(rootView: view)
-        hosting.sizingOptions = .preferredContentSize
-        panel.contentViewController = hosting
-        panel.pinToTopRight(contentSize: hosting.view.fittingSize, inset: Metrics.ResumePanel.screenInset)
+        let (_, size) = panel.hostSizedContent(view, width: Metrics.ResumePanel.width)
+        panel.pinToTopRight(contentSize: size, inset: Metrics.ResumePanel.screenInset)
         panel.orderFrontRegardless()
         panel.makeKey()
         autoClose.start()

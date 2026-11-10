@@ -5,10 +5,13 @@ import AppKit
 class TopAnchoredPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 
+    /// Re-anchors the top only for real height changes (a point or more). Sub-point differences pass
+    /// through untouched: on a 1x display AppKit rounds a fractional height, and treating that rounding
+    /// as a resize made the old SwiftUI-driven sizing loop until the stack overflowed.
     override func setFrame(_ frameRect: NSRect, display flag: Bool) {
         var rect = frameRect
-        if isVisible, rect.size != frame.size, rect.origin == frame.origin {
-            rect.origin.y = frame.maxY - rect.height
+        if isVisible, rect.origin == frame.origin, abs(rect.height - frame.height) >= 1 {
+            rect.origin.y = (frame.maxY - rect.height).rounded()
         }
         super.setFrame(rect, display: flag)
     }

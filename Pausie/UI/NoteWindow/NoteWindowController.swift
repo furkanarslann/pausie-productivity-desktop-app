@@ -13,14 +13,13 @@ final class NoteWindowController {
     }
 
     var isVisible: Bool { panel?.isVisible == true || panel?.isMiniaturized == true }
+    var frame: NSRect? { panel?.frame }
 
     func show(mode: NoteWindowMode) {
         let panel = panel ?? makePanel()
         self.panel = panel
-        let hosting = NSHostingController(rootView: NoteWindowView(session: session, mode: mode))
-        hosting.sizingOptions = .preferredContentSize
-        panel.contentViewController = hosting
-        panel.centerOnMainScreen(contentSize: hosting.view.fittingSize)
+        let (_, size) = panel.hostSizedContent(NoteWindowView(session: session, mode: mode), width: Metrics.NoteWindow.width)
+        panel.centerOnMainScreen(contentSize: size)
 
         if panel.isMiniaturized { panel.deminiaturize(nil) }
         // A non-activating panel takes the keyboard without bringing Pausie (or its menu bar) forward.
