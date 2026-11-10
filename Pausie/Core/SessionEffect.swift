@@ -1,12 +1,5 @@
 import Foundation
 
-enum NoteWindowMode: Equatable, Sendable {
-    /// T2: two buttons ("Save & keep working", "Save & take a break").
-    case pending
-    /// T8: only "Save".
-    case edit
-}
-
 enum BreakOverlayMode: Equatable, Sendable {
     /// Screen 04: break layer + required-note card; break timer not started.
     case noteRequired
@@ -23,8 +16,10 @@ enum SessionEffect: Equatable, Sendable {
     /// Set the break deadline.
     case startBreakTimer
     case stopTimers
-    case openNoteWindow(NoteWindowMode)
+    case openNoteWindow
     case closeNoteWindow
+    /// Pick the next "Ask me later" reminder (3 or 1 min left) after the time left now.
+    case scheduleNoteReminder
     case showBreakOverlay(BreakOverlayMode)
     case hideBreakOverlay
     /// Saving again in the same cycle updates the same record.

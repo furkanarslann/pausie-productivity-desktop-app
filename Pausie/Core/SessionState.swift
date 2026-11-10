@@ -8,8 +8,8 @@ enum SessionState: Equatable, Sendable {
     case working
     /// 5 min or less left, no note yet, note window open.
     case preBreakPending
-    /// Note saved within the last 5 min.
-    case preBreakNoted
+    /// "Ask me later": note window closed, it reopens at 3 and 1 min left.
+    case preBreakSnoozed
     /// Work time ended without a note; break timer not started.
     case breakNoteRequired
     /// Break timer running.
@@ -20,7 +20,7 @@ enum SessionState: Equatable, Sendable {
     /// States in which the work timer counts down.
     var isWorkPhase: Bool {
         switch self {
-        case .working, .preBreakPending, .preBreakNoted: true
+        case .working, .preBreakPending, .preBreakSnoozed: true
         default: false
         }
     }
@@ -39,6 +39,10 @@ enum SessionRules {
     /// The note window opens this many minutes before the work time ends (`warningLead`).
     static let warningLeadMinutes = 5
     static var warningLead: TimeInterval { TimeInterval(warningLeadMinutes * 60) }
+    /// "Ask me later" brings the note window back when this much work time is left (then at time up).
+    static let noteReminderLeads: [TimeInterval] = [3 * 60, 1 * 60]
+    /// A reminder closer than this to the moment "Ask me later" was pressed is skipped.
+    static let noteReminderMinimumGap: TimeInterval = 10
     /// The break-over chime stops after this long (rule 3).
     static let chimeMaxDuration: TimeInterval = 60
     /// The chime repeats at this interval while it plays.

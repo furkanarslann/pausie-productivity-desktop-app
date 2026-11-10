@@ -44,9 +44,9 @@ struct SnapshotTests {
         case .preBreakPending:
             h.advance(minutes: 45.13)
             h.controller.draft = "- [ ] Finish validation on the login screen\n- [ ] Reply to PR review comments\n- [ ] "
-        case .preBreakNoted:
+        case .preBreakSnoozed:
             h.advance(minutes: 45)
-            h.controller.send(.saveNoteAndContinue(markdown: "- [ ] Finish validation"))
+            h.controller.askLater()
             h.advance(minutes: 1.8)
         case .breakNoteRequired:
             h.advance(minutes: 50)
@@ -64,17 +64,24 @@ struct SnapshotTests {
     }
 
     @Test func menuHeaders() throws {
-        for state in [SessionState.idle, .working, .preBreakNoted, .onBreak, .breakNoteRequired, .breakOver] {
+        for state in [SessionState.idle, .working, .preBreakSnoozed, .onBreak, .breakNoteRequired, .breakOver] {
             let h = harness(at: state)
             try render("01-menu-header-\(state)", MenuHeaderContent(header: MenuPresentation(session: h.controller).header)
                 .background(Color(.surfaceWindow)))
         }
     }
 
+    @Test func statusItemLabel() throws {
+        let icon = PausieAsset.menuBarIcon()
+        try render("00-status-item-working", StatusItemLabel(session: harness(at: .working).controller, icon: icon)
+            .frame(height: 24))
+        try render("00-status-item-note-required", StatusItemLabel(session: harness(at: .breakNoteRequired).controller, icon: icon)
+            .frame(height: 24))
+    }
+
     @Test func noteWindow() throws {
         let h = harness(at: .preBreakPending)
-        try render("03-note-window-pending", NoteWindowView(session: h.controller, mode: .pending))
-        try render("03-note-window-edit", NoteWindowView(session: h.controller, mode: .edit))
+        try render("03-note-window", NoteWindowView(session: h.controller))
     }
 
     @Test func breakCards() throws {

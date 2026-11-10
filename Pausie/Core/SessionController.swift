@@ -5,7 +5,7 @@ import os
 /// UI side of the effects. Implemented by the app coordinator, which owns the window controllers.
 @MainActor
 protocol SessionPresenting: AnyObject {
-    func openNoteWindow(mode: NoteWindowMode)
+    func openNoteWindow()
     func closeNoteWindow()
     func showBreakOverlay(mode: BreakOverlayMode)
     func hideBreakOverlay()
@@ -33,8 +33,8 @@ final class SessionController {
     private(set) var state: SessionState = .idle
     /// Refreshed every tick; views read it to update countdowns.
     private(set) var now: Date
-    /// The note being written in this cycle. Shared by the note window and the required-note editor,
-    /// so an unsaved draft carries over at T5.
+    /// The note being written in this cycle. Shared by the note window and the required-note editor;
+    /// it survives "Ask me later" and is saved automatically when work time runs out (T5).
     var draft: String = TodoMarkdown.template
     /// The note saved in this cycle, if any. Saving again updates the same record.
     private(set) var currentNote: Note?
@@ -47,6 +47,8 @@ final class SessionController {
     private(set) var pausedWorkRemaining: TimeInterval?
     private(set) var breakDeadline: Date?
     private(set) var pauseReasons: Set<PauseReason> = []
+    /// After "Ask me later": the note window comes back when this much work time is left.
+    private(set) var noteReminderAt: TimeInterval?
 
     @ObservationIgnored weak var presenter: SessionPresenting?
     @ObservationIgnored private let clock: SessionClock
@@ -146,13 +148,29 @@ final class SessionController {
         if state == .working, let remaining = workRemaining, remaining <= SessionRules.warningLead {
             send(.warningReached)
         }
-        if state == .preBreakPending || state == .preBreakNoted,
+        if state == .preBreakSnoozed, let reminder = noteReminderAt,
+           let remaining = workRemaining, remaining <= reminder {
+            send(.noteReminder)
+        }
+        if state == .preBreakPending || state == .preBreakSnoozed,
            !isWorkPaused, let remaining = workRemaining, remaining <= 0 {
-            send(.workTimeUp)
+            send(.workTimeUp(draft: draft))
         }
         if state == .onBreak, let remaining = breakRemaining, remaining <= 0 {
             send(.breakTimeUp)
         }
+    }
+
+    // MARK: - Note window
+
+    /// "Ask me later" (T14).
+    func askLater() {
+        send(.askLater)
+    }
+
+    /// "Write note now" in the menu while snoozed (T15).
+    func writeNoteNow() {
+        send(.noteReminder)
     }
 
     // MARK: - Skip break (T12)
@@ -217,6 +235,7 @@ final class SessionController {
             }
             draft = TodoMarkdown.template
             currentNote = nil
+            noteReminderAt = nil
             isSkipConfirmationPresented = false
             startTicking()
 
@@ -232,14 +251,17 @@ final class SessionController {
             breakDeadline = nil
             draft = TodoMarkdown.template
             currentNote = nil
+            noteReminderAt = nil
             stopTicking()
 
-        case let .openNoteWindow(mode):
-            if mode == .edit {
-                let saved = currentNote?.markdown ?? ""
-                draft = saved.isEmpty ? TodoMarkdown.template : saved
-            }
-            presenter?.openNoteWindow(mode: mode)
+        case .openNoteWindow:
+            noteReminderAt = nil
+            presenter?.openNoteWindow()
+
+        case .scheduleNoteReminder:
+            // The first reminder still ahead (with a little gap); none left means the next prompt is at time up.
+            let remaining = workRemaining ?? 0
+            noteReminderAt = SessionRules.noteReminderLeads.first { $0 < remaining - SessionRules.noteReminderMinimumGap }
 
         case .closeNoteWindow:
             presenter?.closeNoteWindow()

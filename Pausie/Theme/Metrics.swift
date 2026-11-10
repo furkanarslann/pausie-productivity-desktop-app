@@ -95,6 +95,8 @@ enum Metrics {
     /// Status item (menu bar extra).
     enum StatusItem {
         static let iconHeight: CGFloat = 16
+        static let spacing: CGFloat = 6
+        static let horizontalPadding: CGFloat = 6
     }
 
     /// Status item menu (screens 01, 02).

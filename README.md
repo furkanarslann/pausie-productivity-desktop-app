@@ -108,11 +108,20 @@ The guide's proposals were used as defaults; change them here and in the spec if
   custom Figma popover (radius 10, `brand/primary` highlight).
 - **Note window (03b).** Centered on the main display, 600 pt wide, and it takes the keyboard when it
   opens so you can type right away (it's a non-activating panel, so Pausie doesn't come to the front).
-  `⌘Return` saves (the primary button). The break note-required card (04) stays centered on the break layer.
+  Buttons: **Ask me later** (Esc) and **Save & take a break** (`⌘Return`). The break note-required
+  card (04) stays centered on the break layer.
+- **Flow changes from the spec.** "Save & keep working" was removed, and with it the "note saved"
+  state, "Take a break now" and "Edit note" (T3, T6, T7, T8). Instead:
+  - **Ask me later (T14/T15):** closes the note window and brings it back at 3 min and 1 min left
+    (`SessionRules.noteReminderLeads`; a reminder less than 10 s away is skipped). The menu offers
+    "Write note now" in the meantime. The draft is kept.
+  - **Time up (T5):** notes typed so far are saved and the break starts. Only if nothing was written
+    does the break screen ask for the note (the break timer waits, rule 1).
 - **Break ring (05).** The relaxed pose sits in a ring whose `brand/primary` arc shows the time left.
-- **Note editor.** Each todo is its own line: Return adds a todo (not from an empty one), Backspace in an empty todo removes it
-  (caret moves to the end of the one above), ↑/↓ move between todos. Empty todos are dropped on save
-  wherever they are, so a cleared item never comes back as an empty checkbox.
+- **Note editor.** Each todo is its own line and long todos wrap (the row grows), so the text and
+  the caret stay visible. Return adds a todo (not from an empty one), Backspace in an empty todo
+  removes it. ↑/↓ move through a todo's wrapped lines, then to the todo above (caret at its end) or
+  below (caret at its start). Empty todos are dropped on save wherever they are.
 - **"Welcome back!" panel closes itself after 15 s** (`SessionRules.resumePanelAutoCloseDelay`); the
   countdown pauses while the pointer is over it. The note stays in Recent notes. This replaces the
   spec's "stays until closed" (rule 8); it still also closes at the next warning.
@@ -121,7 +130,9 @@ The guide's proposals were used as defaults; change them here and in the spec if
   changes by a whole point, on the next run loop turn. The AppKit-driven sizing crashed when a note with
   long wrapped lines was opened from Recent notes on a 1x display (a fractional height that AppKit kept
   rounding fed a resize-layout loop until the stack overflowed).
-- **T6/T7 also close the note window**, so an open "Edit note" window can't sit above the break.
+- **Menu bar timer.** SF Pro Text Regular 12 with monospaced digits (lighter and smaller than
+  Figma's Semibold 13), drawn by a small SwiftUI label inside the status item so the digits roll like
+  the system timer's (`numericText` transition).
 - **Backdrop blur** under the 45% dim is an `NSVisualEffectView` at half strength, approximating
   Figma's 5 pt blur; tune `OpacityToken.breakBlur` after seeing it on screen.
 - **Copy icon** uses the SF Symbol `doc.on.doc` tinted `brand/primary` (Figma's SVG keeps `#7C3AED`

@@ -75,10 +75,11 @@ nonisolated struct TodoEditorModel: Equatable, Sendable {
             : Focus(rowID: rows[0].id, caret: .start)
     }
 
-    /// ↑ / ↓ between rows.
+    /// ↑ / ↓ between rows: up lands at the end of the row above, down at the start of the row below,
+    /// so moving on continues through that row's wrapped lines.
     func neighbor(of id: UUID, offset: Int) -> Focus? {
         guard let index = index(of: id), rows.indices.contains(index + offset) else { return nil }
-        return Focus(rowID: rows[index + offset].id, caret: .end)
+        return Focus(rowID: rows[index + offset].id, caret: offset < 0 ? .end : .start)
     }
 
     /// Splits multi-line text and strips typed `- [ ]` markers so every row holds plain text.

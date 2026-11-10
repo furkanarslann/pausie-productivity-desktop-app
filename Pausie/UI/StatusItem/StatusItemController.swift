@@ -19,6 +19,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private weak var actions: StatusMenuActions?
     private var isMenuOpen = false
     private var builtForState: SessionState?
+    private var label: PassthroughHostingView<StatusItemLabel>?
 
     init(session: SessionController, noteStore: NoteStore, actions: StatusMenuActions) {
         self.session = session
@@ -33,9 +34,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         statusItem.menu = menu
 
         if let button = statusItem.button {
-            button.image = PausieAsset.menuBarIcon()
-            button.imagePosition = .imageLeading
+            button.title = ""
             button.setAccessibilityLabel(L10n.t(.menubarAccessibilityLabel))
+            let label = PassthroughHostingView(rootView: StatusItemLabel(session: session, icon: PausieAsset.menuBarIcon()))
+            label.frame = button.bounds
+            label.autoresizingMask = [.width, .height]
+            button.addSubview(label)
+            self.label = label
         }
         observeSession()
     }
@@ -51,17 +56,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
     }
 
+    /// The label view animates itself; here the item's width follows it and VoiceOver gets the time.
     private func updateTitle() {
-        guard let button = statusItem.button else { return }
-        let presentation = MenuPresentation(session: session)
-        if let title = presentation.title {
-            button.attributedTitle = NSAttributedString(string: title, attributes: [
-                .font: TypographyToken.menuBarTitle.nsFont,
-            ])
-            button.imagePosition = .imageLeading
-        } else {
-            button.attributedTitle = NSAttributedString()
-            button.imagePosition = .imageOnly
+        let title = MenuPresentation(session: session).title
+        statusItem.button?.setAccessibilityValue(title)
+        if let label {
+            statusItem.length = label.fittingSize.width.rounded(.up)
         }
     }
 
@@ -111,10 +111,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             return actionItem(.menuItemStart, #selector(start), key: "s")
         case .stop:
             return actionItem(.menuItemStop, #selector(stop))
-        case .takeBreakNow:
-            return actionItem(.menuItemTakeBreakNow, #selector(takeBreakNow))
-        case .editNote:
-            return actionItem(.menuItemEditNote, #selector(editNote))
+        case .writeNote:
+            return actionItem(.menuItemWriteNote, #selector(writeNote))
         case .skipBreak:
             return actionItem(.menuItemSkipBreak, #selector(skipBreak))
         case .recentNotes:
@@ -138,8 +136,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func start() { session.send(.start) }
     @objc private func stop() { session.send(.stop) }
-    @objc private func takeBreakNow() { session.send(.takeBreakNow) }
-    @objc private func editNote() { session.send(.editNote) }
+    @objc private func writeNote() { session.writeNoteNow() }
     @objc private func skipBreak() { actions?.requestSkipBreak() }
     @objc private func openSettings() { actions?.showSettings() }
     @objc private func quit() { NSApp.terminate(nil) }

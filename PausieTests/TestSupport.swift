@@ -20,7 +20,7 @@ final class FakeClock: SessionClock, @unchecked Sendable {
 @MainActor
 final class RecordingPresenter: SessionPresenting {
     enum Call: Equatable {
-        case openNoteWindow(NoteWindowMode)
+        case openNoteWindow
         case closeNoteWindow
         case showBreakOverlay(BreakOverlayMode)
         case hideBreakOverlay
@@ -30,7 +30,7 @@ final class RecordingPresenter: SessionPresenting {
 
     private(set) var calls: [Call] = []
 
-    func openNoteWindow(mode: NoteWindowMode) { calls.append(.openNoteWindow(mode)) }
+    func openNoteWindow() { calls.append(.openNoteWindow) }
     func closeNoteWindow() { calls.append(.closeNoteWindow) }
     func showBreakOverlay(mode: BreakOverlayMode) { calls.append(.showBreakOverlay(mode)) }
     func hideBreakOverlay() { calls.append(.hideBreakOverlay) }

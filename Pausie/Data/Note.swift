@@ -60,6 +60,11 @@ enum TodoMarkdown {
         lines(of: markdown).filter { !isEmptyLine($0) }.joined(separator: "\n")
     }
 
+    /// Whether a note has any todo text (an empty or template-only note has none).
+    static func hasContent(_ markdown: String) -> Bool {
+        !normalizedForSave(markdown).isEmpty
+    }
+
     /// Lines shown in the resume panel: empty todos and blank lines are skipped
     /// (notes saved before empty todos were dropped may still contain them).
     static func displayLines(_ markdown: String) -> [Line] {

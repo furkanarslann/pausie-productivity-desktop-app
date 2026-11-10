@@ -13,7 +13,7 @@ struct MenuPresentationTests {
         #expect(MenuPresentation(Snapshot(state: .idle)).title == nil)
         #expect(MenuPresentation(Snapshot(state: .working, workRemaining: 42 * 60 + 18)).title == "42:18")
         #expect(MenuPresentation(Snapshot(state: .preBreakPending, workRemaining: 4 * 60 + 52)).title == "04:52")
-        #expect(MenuPresentation(Snapshot(state: .preBreakNoted, workRemaining: 191.2)).title == "03:12")
+        #expect(MenuPresentation(Snapshot(state: .preBreakSnoozed, workRemaining: 191.2)).title == "03:12")
         #expect(MenuPresentation(Snapshot(state: .breakNoteRequired)).title == L10n.t(.menubarTitleBreak))
         #expect(MenuPresentation(Snapshot(state: .onBreak, breakRemaining: 8 * 60 + 42)).title == "08:42")
         #expect(MenuPresentation(Snapshot(state: .breakOver)).title == "00:00")
@@ -37,9 +37,10 @@ struct MenuPresentationTests {
         #expect(MenuPresentation.makeRows(for: .working) == [
             .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
         ])
-        #expect(MenuPresentation.makeRows(for: .preBreakNoted) == [
-            .separator, .takeBreakNow, .editNote, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
+        #expect(MenuPresentation.makeRows(for: .preBreakSnoozed) == [
+            .separator, .writeNote, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
         ])
+        #expect(MenuPresentation.makeRows(for: .preBreakPending) == MenuPresentation.makeRows(for: .working))
         #expect(MenuPresentation.makeRows(for: .onBreak) == [
             .separator, .skipBreak, .separator, .recentNotes, .settings, .separator, .quit,
         ])
@@ -66,9 +67,10 @@ struct MenuPresentationTests {
         #expect(working.subtitle == "42:18 left · break at \(TimeFormat.clockTime(now))")
         #expect(working.progress == 0.15)
 
-        let noted = MenuPresentation(Snapshot(state: .preBreakNoted, workRemaining: 192, workProgress: 0.9)).header
-        #expect(noted.pose == .takingNotes)
-        #expect(noted.subtitle == "Break in 03:12")
+        let snoozed = MenuPresentation(Snapshot(state: .preBreakSnoozed, workRemaining: 192, workEndsAt: now, workProgress: 0.9)).header
+        #expect(snoozed.title == "Focus session")
+        #expect(snoozed.subtitle == "03:12 left · break at \(TimeFormat.clockTime(now))")
+        #expect(snoozed.progress == 0.9)
 
         let onBreak = MenuPresentation(Snapshot(state: .onBreak, breakRemaining: 522, breakEndsAt: now)).header
         #expect(onBreak.pose == .breakTime)

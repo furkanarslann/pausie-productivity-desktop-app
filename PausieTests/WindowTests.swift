@@ -102,6 +102,113 @@ struct WindowTests {
         controller.close()
     }
 
+    // MARK: - Keyboard in the note editor
+
+    /// Yields to the app's run loop so main-actor work (like the editor's deferred focus) runs. A nested
+    /// `RunLoop.main.run` from inside a main-queue block can't drain the main queue.
+    private func settle(_ seconds: Double) async throws {
+        try await Task.sleep(for: .milliseconds(Int(seconds * 1000)))
+    }
+
+    private func send(_ key: Int, chars: String? = nil, to window: NSWindow) async throws {
+        let characters = chars ?? String(Character(UnicodeScalar(UInt16(key))!))
+        let keyCode: UInt16 = switch key {
+        case NSUpArrowFunctionKey: 126
+        case NSDownArrowFunctionKey: 125
+        default: 0
+        }
+        let flags: NSEvent.ModifierFlags = chars == nil ? [.numericPad, .function] : []
+        for type in [NSEvent.EventType.keyDown, .keyUp] {
+            let event = NSEvent.keyEvent(
+                with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, characters: characters,
+                charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode
+            )
+            if let event { window.sendEvent(event) }
+        }
+        try await settle(0.25)
+    }
+
+    /// The row holding the caret: the text field the window's field editor is editing.
+    private func editedRowText(in window: NSWindow) -> String? {
+        guard let editor = window.firstResponder as? NSTextView, editor.isFieldEditor,
+              let field = editor.delegate as? NSTextField else { return nil }
+        return field.stringValue
+    }
+
+    /// Where the caret is in the edited row (`nil` if nothing is being edited or text is selected).
+    private func caretLocation(in window: NSWindow) -> Int? {
+        guard let editor = window.firstResponder as? NSTextView, editor.isFieldEditor,
+              editor.selectedRange.length == 0 else { return nil }
+        return editor.selectedRange.location
+    }
+
+    @Test("Up and down move the caret between todos, and typing goes to that todo")
+    func caretMovesBetweenRows() async throws {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.draft = "- [ ] one\n- [ ] two\n- [ ] three"
+        let controller = NoteWindowController(session: h.controller)
+        controller.show()
+        try await settle(0.5)
+        let window = try #require(controller.window)
+        #expect(editedRowText(in: window) == "three")
+
+        // The countdown re-renders the window every second; the caret must survive that.
+        // Up lands at the end of the row above, down at the start of the row below.
+        for (key, row, caret) in [(NSUpArrowFunctionKey, "two", 3), (NSUpArrowFunctionKey, "one", 3), (NSDownArrowFunctionKey, "two", 0)] {
+            try await send(key, to: window)
+            #expect(editedRowText(in: window) == row)
+            #expect(caretLocation(in: window) == caret)
+            for _ in 0..<3 {
+                h.advance(seconds: 1)
+                try await settle(0.1)
+                #expect(editedRowText(in: window) == row, "Caret left the row after a countdown tick")
+                #expect(caretLocation(in: window) == caret)
+            }
+        }
+
+        try await send(0, chars: "X", to: window)
+        #expect(h.controller.draft == "- [ ] one\n- [ ] Xtwo\n- [ ] three")
+        controller.close()
+    }
+
+    @Test("A long todo wraps, keeps the caret in view, and up walks through its lines first")
+    func longTodoWraps() async throws {
+        let long = String(repeating: "eğer not alırken süre biterse notlar kaybolmasın ", count: 4)
+            .trimmingCharacters(in: .whitespaces)
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.draft = "- [ ] short\n- [ ] \(long)\n- [ ] last"
+        let controller = NoteWindowController(session: h.controller)
+        controller.show()
+        try await settle(0.5)
+        let window = try #require(controller.window)
+        #expect(editedRowText(in: window) == "last")
+
+        try await send(NSUpArrowFunctionKey, to: window)
+        #expect(editedRowText(in: window) == long)
+        #expect(caretLocation(in: window) == (long as NSString).length)
+        let editor = try #require(window.firstResponder as? NSTextView)
+        let field = try #require(editor.delegate as? NSTextField)
+        #expect(field.frame.height > TypographyToken.body.spec.lineHeight * 2, "The long todo should wrap onto several lines")
+        // The caret's rectangle is inside the field, i.e. visible.
+        let caretRect = editor.firstRect(forCharacterRange: editor.selectedRange, actualRange: nil)
+        let fieldOnScreen = window.convertToScreen(field.convert(field.bounds, to: nil))
+        #expect(fieldOnScreen.insetBy(dx: -2, dy: -2).contains(caretRect.origin), "Caret is out of view")
+
+        var presses = 0
+        while editedRowText(in: window) == long, presses < 8 {
+            try await send(NSUpArrowFunctionKey, to: window)
+            presses += 1
+        }
+        #expect(editedRowText(in: window) == "short")
+        #expect(presses > 1, "Up should move through the wrapped lines before leaving the todo")
+        controller.close()
+    }
+
     @Test("The note window lays out with long lines and many rows")
     func noteWindowWithLongNote() throws {
         let h = SessionHarness()
@@ -109,7 +216,7 @@ struct WindowTests {
         h.advance(minutes: 45)
         h.controller.draft = Self.longNote
         let window = NoteWindowController(session: h.controller)
-        window.show(mode: .pending)
+        window.show()
         spinRunLoop(0.5)
         #expect(window.isVisible)
         let before = try #require(window.frame)

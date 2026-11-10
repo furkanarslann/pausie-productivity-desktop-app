@@ -20,7 +20,7 @@ struct SessionControllerTests {
         #expect(h.controller.state == .working)
         h.advance(seconds: 1)
         #expect(h.controller.state == .preBreakPending)
-        #expect(h.presenter.calls == [.closeResumePanel, .openNoteWindow(.pending)])
+        #expect(h.presenter.calls == [.closeResumePanel, .openNoteWindow])
 
         // Only once.
         h.presenter.reset()
@@ -28,19 +28,81 @@ struct SessionControllerTests {
         #expect(h.presenter.calls.isEmpty)
     }
 
-    @Test("T3 + T6: save & keep working, then the break starts directly")
-    func saveAndContinueThenBreak() {
+    @Test("T14 + T15: Ask me later brings the note back at 3 and 1 min left, then the break screen asks")
+    func askLaterReminders() {
         let h = SessionHarness()
         h.controller.send(.start)
-        h.advance(minutes: 46)
-        h.controller.send(.saveNoteAndContinue(markdown: "- [ ] write tests\n- [ ] "))
-        #expect(h.controller.state == .preBreakNoted)
-        #expect(h.noteStore.notes.first?.markdown == "- [ ] write tests")
+        h.advance(minutes: 45)
+        h.presenter.reset()
 
-        h.advance(minutes: 4)
-        #expect(h.controller.state == .onBreak)
-        #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
-        #expect(h.presenter.calls.contains(.showBreakOverlay(.running)))
+        h.controller.askLater()
+        #expect(h.controller.state == .preBreakSnoozed)
+        #expect(h.controller.noteReminderAt == TimeInterval(3 * 60))
+        #expect(h.presenter.calls == [.closeNoteWindow])
+
+        h.advance(seconds: 119)
+        #expect(h.controller.state == .preBreakSnoozed)
+        h.advance(seconds: 1) // 3:00 left
+        #expect(h.controller.state == .preBreakPending)
+        #expect(h.presenter.calls.last == .openNoteWindow)
+
+        h.controller.askLater()
+        #expect(h.controller.noteReminderAt == TimeInterval(1 * 60))
+        h.advance(minutes: 2) // 1:00 left
+        #expect(h.controller.state == .preBreakPending)
+
+        h.controller.askLater()
+        #expect(h.controller.noteReminderAt == nil)
+        h.advance(seconds: 59)
+        #expect(h.controller.state == .preBreakSnoozed)
+        h.advance(seconds: 1) // time up with nothing written: ask on the break screen
+        #expect(h.controller.state == .breakNoteRequired)
+        #expect(h.controller.breakDeadline == nil)
+    }
+
+    @Test("Ask me later right before a reminder skips it")
+    func askLaterSkipsImminentReminder() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.advance(seconds: 115) // 3:05 left
+        h.controller.askLater()
+        #expect(h.controller.noteReminderAt == TimeInterval(1 * 60))
+    }
+
+    @Test("Write note now reopens the note window while snoozed")
+    func writeNoteNow() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.askLater()
+        h.presenter.reset()
+        h.controller.writeNoteNow()
+        #expect(h.controller.state == .preBreakPending)
+        #expect(h.presenter.calls == [.openNoteWindow])
+        #expect(h.controller.noteReminderAt == nil)
+    }
+
+    @Test("The draft survives Ask me later")
+    func draftSurvivesAskLater() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.draft = "- [ ] started typing"
+        h.controller.askLater()
+        h.controller.writeNoteNow()
+        #expect(h.controller.draft == "- [ ] started typing")
+    }
+
+    @Test("Stop while snoozed goes idle and drops the reminder")
+    func stopWhileSnoozed() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.askLater()
+        h.controller.send(.stop)
+        #expect(h.controller.state == .idle)
+        #expect(h.controller.noteReminderAt == nil)
     }
 
     @Test("T4: save & take a break skips the remaining work time")
@@ -54,56 +116,55 @@ struct SessionControllerTests {
         #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
     }
 
-    @Test("T5 + T9 + rule 1: no note means the break timer waits for the save")
+    @Test("T5 + T9 + rule 1: nothing written means the break timer waits for the save")
     func requiredNoteHoldsTheBreakTimer() {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
         #expect(h.controller.state == .preBreakPending)
-        h.controller.draft = "- [ ] unsaved draft"
 
         h.advance(minutes: 5)
         #expect(h.controller.state == .breakNoteRequired)
         #expect(h.controller.breakRemaining == nil)
         #expect(h.controller.breakDeadline == nil)
-        // The draft carries over to the required-note editor.
-        #expect(h.controller.draft == "- [ ] unsaved draft")
 
         // Writing takes 3 minutes; that time doesn't come out of the break.
         h.advance(minutes: 3)
+        h.controller.draft = "- [ ] written on the break screen"
         h.controller.send(.saveRequiredNote(markdown: h.controller.draft))
         #expect(h.controller.state == .onBreak)
         #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
-        #expect(h.noteStore.latest?.markdown == "- [ ] unsaved draft")
+        #expect(h.noteStore.latest?.markdown == "- [ ] written on the break screen")
     }
 
-    @Test("T7: take a break now from the menu")
-    func takeBreakNow() {
+    @Test("T5: notes being typed when time runs out are saved and the break starts")
+    func timeUpSavesTypedNotes() {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndContinue(markdown: ""))
-        h.controller.send(.takeBreakNow)
+        h.controller.draft = "- [ ] half done\n- [ ] "
+        h.presenter.reset()
+
+        h.advance(minutes: 5)
         #expect(h.controller.state == .onBreak)
+        #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
+        #expect(h.noteStore.latest?.markdown == "- [ ] half done")
+        #expect(h.presenter.calls == [.closeNoteWindow, .showBreakOverlay(.running)])
     }
 
-    @Test("T8: Edit note updates the same record; no duplicate in history")
-    func editNoteUpdatesSameRecord() throws {
+    @Test("T5: notes typed before Ask me later are saved at time up too")
+    func timeUpSavesSnoozedDraft() {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndContinue(markdown: "- [ ] first"))
-        let id = try #require(h.controller.currentNote?.id)
-
-        h.controller.send(.editNote)
-        #expect(h.controller.state == .preBreakNoted)
-        #expect(h.controller.draft == "- [ ] first")
-        #expect(h.presenter.calls.last == .openNoteWindow(.edit))
-
-        h.controller.send(.saveNoteAndContinue(markdown: "- [ ] first\n- [ ] second"))
-        #expect(h.noteStore.notes.count == 1)
-        #expect(h.noteStore.notes.first?.id == id)
-        #expect(h.noteStore.notes.first?.markdown == "- [ ] first\n- [ ] second")
+        h.controller.draft = "- [ ] typed, then snoozed"
+        h.controller.askLater()
+        h.controller.writeNoteNow()
+        h.controller.askLater()
+        h.controller.askLater() // ignored: already snoozed
+        h.advance(minutes: 5)
+        #expect(h.controller.state == .onBreak)
+        #expect(h.noteStore.latest?.markdown == "- [ ] typed, then snoozed")
     }
 
     @Test("A todo cleared before saving doesn't stay in the note as an empty checkbox")
@@ -111,19 +172,8 @@ struct SessionControllerTests {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndContinue(markdown: "- [ ] first\n- [ ] \n- [ ] third"))
+        h.controller.send(.saveNoteAndBreak(markdown: "- [ ] first\n- [ ] \n- [ ] third"))
         #expect(h.noteStore.latest?.markdown == "- [ ] first\n- [ ] third")
-    }
-
-    @Test("Edit of an empty saved note opens with the todo template")
-    func editEmptyNote() {
-        let h = SessionHarness()
-        h.controller.send(.start)
-        h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndContinue(markdown: "- [ ] "))
-        #expect(h.noteStore.latest?.markdown == "")
-        h.controller.send(.editNote)
-        #expect(h.controller.draft == TodoMarkdown.template)
     }
 
     @Test("T10 + T11: chime at the end of the break, Let's go stops it and opens the resume panel")
@@ -318,7 +368,7 @@ struct SessionControllerTests {
         h.advance(minutes: 51)
         #expect(h.controller.state == .breakNoteRequired)
         #expect(h.presenter.calls == [
-            .closeResumePanel, .openNoteWindow(.pending), .closeNoteWindow, .showBreakOverlay(.noteRequired),
+            .closeResumePanel, .openNoteWindow, .closeNoteWindow, .showBreakOverlay(.noteRequired),
         ])
     }
 }
