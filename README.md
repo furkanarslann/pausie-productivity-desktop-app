@@ -131,8 +131,9 @@ The guide's proposals were used as defaults; change them here and in the spec if
   long wrapped lines was opened from Recent notes on a 1x display (a fractional height that AppKit kept
   rounding fed a resize-layout loop until the stack overflowed).
 - **Menu bar timer.** SF Pro Text Regular 12 with monospaced digits (lighter and smaller than
-  Figma's Semibold 13), drawn by a small SwiftUI label inside the status item so the digits roll like
-  the system timer's (`numericText` transition).
+  Figma's Semibold 13), drawn by a small SwiftUI label inside the status item. Changed digits slide in
+  (`RollingText`) at their exact size; `.numericText` was dropped because it scales and blurs digits
+  mid-change, which made them grow and shrink every second.
 - **Backdrop blur** under the 45% dim is an `NSVisualEffectView` at half strength, approximating
   Figma's 5 pt blur; tune `OpacityToken.breakBlur` after seeing it on screen.
 - **Copy icon** uses the SF Symbol `doc.on.doc` tinted `brand/primary` (Figma's SVG keeps `#7C3AED`

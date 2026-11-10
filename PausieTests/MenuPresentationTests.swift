@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Foundation
 import Testing
 @testable import Pausie
@@ -290,5 +291,43 @@ struct PanelResizingTests {
         #expect(panel.contentRect(forFrameRect: panel.frame).height == 288)
         panel.setContentHeightIfNeeded(.infinity)
         #expect(panel.contentRect(forFrameRect: panel.frame).height == 288)
+    }
+}
+
+@Suite("Status item label")
+@MainActor
+struct StatusItemLabelTests {
+    private func size(of view: some View) -> CGSize {
+        NSHostingView(rootView: view).fittingSize
+    }
+
+    private func rolling(_ text: String) -> CGSize {
+        size(of: RollingText(text: text, font: TypographyToken.menuBarTitle.font))
+    }
+
+    @Test("The countdown keeps its size from second to second")
+    func stableSize() {
+        let sizes = ["42:18", "42:17", "09:59", "00:00", "59:11", "10:01"].map(rolling)
+        #expect(Set(sizes.map(\.width)).count == 1, "\(sizes)")
+        #expect(Set(sizes.map(\.height)).count == 1, "\(sizes)")
+    }
+
+    @Test("Rolling digits are drawn at the same size as plain text in the same font")
+    func sameSizeAsPlainText() {
+        let text = "42:18"
+        let plain = size(of: Text(text).font(TypographyToken.menuBarTitle.font))
+        let rolling = rolling(text)
+        // Same glyph size; each character slot rounds up to a whole point, so the width may differ by
+        // under a point per character (constant from second to second, see `stableSize`).
+        #expect(abs(plain.height - rolling.height) < 0.5, "plain \(plain), rolling \(rolling)")
+        #expect(abs(plain.width - rolling.width) <= CGFloat(text.count), "plain \(plain), rolling \(rolling)")
+    }
+
+    @Test("The menu bar font is Regular 12 with monospaced digits")
+    func font() {
+        let spec = TypographyToken.menuBarTitle.spec
+        #expect(spec.size == 12)
+        #expect(spec.weight == .regular)
+        #expect(spec.monospacedDigits)
     }
 }

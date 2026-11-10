@@ -203,6 +203,12 @@ enum Metrics {
     }
 }
 
+/// Animation durations.
+enum Motion {
+    /// A countdown digit rolling to its next value.
+    static let digitRoll: Double = 0.3
+}
+
 /// Window levels. The break layer sits below the menu bar so it stays reachable (rule 6);
 /// Pausie's own panels sit above the break layer.
 enum WindowLevel {

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Status item content: the template icon and the countdown, whose digits roll like the system timer's.
+/// Status item content: the template icon and the countdown, whose changing digits roll in.
 struct StatusItemLabel: View {
     let session: SessionController
     let icon: NSImage?
@@ -14,10 +14,7 @@ struct StatusItemLabel: View {
                     .renderingMode(.template)
             }
             if let title {
-                Text(title)
-                    .font(TypographyToken.menuBarTitle.font)
-                    .contentTransition(.numericText(countsDown: true))
-                    .animation(.snappy, value: title)
+                RollingText(text: title, font: TypographyToken.menuBarTitle.font)
             }
         }
         .foregroundStyle(.primary)
