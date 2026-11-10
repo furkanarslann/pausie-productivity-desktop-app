@@ -53,14 +53,22 @@ enum TodoMarkdown {
         rows.map { uncheckedPrefix + $0 }.joined(separator: "\n")
     }
 
-    /// On save, trailing empty todo lines and blank lines are dropped.
-    /// A completely empty note becomes `""` and is still a valid save.
+    /// On save, empty todo lines and blank lines are dropped wherever they are, so a todo that was
+    /// cleared doesn't come back as an empty checkbox. A completely empty note becomes `""` and is
+    /// still a valid save.
     static func normalizedForSave(_ markdown: String) -> String {
-        var result = lines(of: markdown)
-        while let last = result.last, isEmptyLine(last) {
-            result.removeLast()
+        lines(of: markdown).filter { !isEmptyLine($0) }.joined(separator: "\n")
+    }
+
+    /// Lines shown in the resume panel: empty todos and blank lines are skipped
+    /// (notes saved before empty todos were dropped may still contain them).
+    static func displayLines(_ markdown: String) -> [Line] {
+        parse(markdown).filter { line in
+            switch line {
+            case let .todo(text, _): !text.isEmpty
+            case let .text(text): !text.trimmingCharacters(in: .whitespaces).isEmpty
+            }
         }
-        return result.joined(separator: "\n")
     }
 
     static func isEmptyLine(_ line: String) -> Bool {

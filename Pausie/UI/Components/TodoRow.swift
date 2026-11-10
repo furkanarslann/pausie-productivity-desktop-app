@@ -50,7 +50,7 @@ struct NoteMarkdownView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.ResumePanel.todoSpacing) {
-            ForEach(Array(TodoMarkdown.parse(markdown).enumerated()), id: \.offset) { _, line in
+            ForEach(Array(TodoMarkdown.displayLines(markdown).enumerated()), id: \.offset) { _, line in
                 switch line {
                 case let .todo(text, checked):
                     TodoRow(text: text, checked: checked)

@@ -106,6 +106,15 @@ struct SessionControllerTests {
         #expect(h.noteStore.notes.first?.markdown == "- [ ] first\n- [ ] second")
     }
 
+    @Test("A todo cleared before saving doesn't stay in the note as an empty checkbox")
+    func clearedTodoIsDropped() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.send(.saveNoteAndContinue(markdown: "- [ ] first\n- [ ] \n- [ ] third"))
+        #expect(h.noteStore.latest?.markdown == "- [ ] first\n- [ ] third")
+    }
+
     @Test("Edit of an empty saved note opens with the todo template")
     func editEmptyNote() {
         let h = SessionHarness()

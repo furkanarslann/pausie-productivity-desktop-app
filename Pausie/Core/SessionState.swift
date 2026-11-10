@@ -43,6 +43,9 @@ enum SessionRules {
     static let chimeMaxDuration: TimeInterval = 60
     /// The chime repeats at this interval while it plays.
     static let chimeRepeatInterval: TimeInterval = 10
+    /// The resume ("Welcome back!") panel closes itself after this long; the note stays in Recent notes.
+    /// The countdown pauses while the pointer is over the panel.
+    static let resumePanelAutoCloseDelay: TimeInterval = 15
     /// How long "Copied!" stays visible in the resume panel.
     static let copiedFeedbackDuration: TimeInterval = 1.5
 }

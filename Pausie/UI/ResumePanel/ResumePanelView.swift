@@ -6,6 +6,8 @@ import SwiftUI
 struct ResumePanelView: View {
     let note: Note
     let onClose: () -> Void
+    /// Pointer entered (`true`) or left the panel; pauses the auto-close countdown.
+    var onHoverChange: (Bool) -> Void = { _ in }
 
     @State private var showsCopied = false
     @State private var copiedResetTask: Task<Void, Never>?
@@ -20,6 +22,7 @@ struct ResumePanelView: View {
         }
         .frame(width: Metrics.ResumePanel.width)
         .pausieSurface(radius: Radius.md, shadow: false)
+        .onHover(perform: onHoverChange)
     }
 
     private var header: some View {
@@ -66,7 +69,7 @@ struct ResumePanelView: View {
     @ViewBuilder
     private var todos: some View {
         Group {
-            if note.markdown.isEmpty {
+            if TodoMarkdown.displayLines(note.markdown).isEmpty {
                 Text(L10n.t(.resumeEmptyNote))
                     .typography(.body)
                     .foregroundStyle(Color(.textSecondary))

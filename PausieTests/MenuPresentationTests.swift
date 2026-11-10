@@ -104,13 +104,129 @@ struct ControlLogicTests {
     }
 
     @Test("Pasted multi-line markdown is split into rows without duplicate markers")
-    func editorNormalize() {
-        let id = UUID()
-        let rows = TodoEditor.normalize([TodoEditor.EditorRow(id: id, text: "- [ ] one\n- [ ] two\nthree")])
-        #expect(rows.map(\.text) == ["one", "two", "three"])
-        #expect(rows.first?.id == id)
-        #expect(TodoEditor.normalize([]).map(\.text) == [""])
-        let plain = [TodoEditor.EditorRow(text: "already plain")]
-        #expect(TodoEditor.normalize(plain) == plain)
+    func editorPaste() {
+        var model = TodoEditorModel(markdown: "- [ ] first")
+        let id = model.rows[0].id
+        let focus = model.setText("- [ ] one\n- [ ] two\nthree", for: id)
+        #expect(model.rows.map(\.text) == ["one", "two", "three"])
+        #expect(model.rows.first?.id == id)
+        #expect(focus == TodoEditorModel.Focus(rowID: model.rows[2].id, caret: .end))
+        #expect(model.markdown == "- [ ] one\n- [ ] two\n- [ ] three")
+    }
+}
+
+@Suite("Todo editor model")
+struct TodoEditorModelTests {
+    private func model(_ texts: [String]) -> TodoEditorModel {
+        TodoEditorModel(rows: texts.map { TodoEditorModel.Row(text: $0) })
+    }
+
+    @Test("An empty editor is one empty row with the todo template")
+    func emptyEditor() {
+        let model = TodoEditorModel(markdown: "")
+        #expect(model.rows.map(\.text) == [""])
+        #expect(model.markdown == TodoMarkdown.template)
+        #expect(TodoEditorModel(rows: []).rows.count == 1)
+    }
+
+    @Test("Return adds an empty row below and focuses it")
+    func insert() {
+        var model = model(["a", "b"])
+        let focus = model.insertRow(after: model.rows[0].id)
+        #expect(model.rows.map(\.text) == ["a", "", "b"])
+        #expect(focus == TodoEditorModel.Focus(rowID: model.rows[1].id, caret: .end))
+    }
+
+    @Test("Backspace in a cleared middle todo removes it; the caret goes to the end of the row above")
+    func deleteMiddle() {
+        var model = model(["first", "second", "third"])
+        let middle = model.rows[1].id
+        #expect(model.setText("", for: middle) == nil)
+        #expect(model.rows.count == 3)
+
+        let focus = model.deleteEmptyRow(middle)
+        #expect(model.rows.map(\.text) == ["first", "third"])
+        #expect(focus == TodoEditorModel.Focus(rowID: model.rows[0].id, caret: .end))
+        #expect(model.markdown == "- [ ] first\n- [ ] third")
+    }
+
+    @Test("Backspace in an empty first row focuses the next row's start")
+    func deleteFirst() {
+        var model = model(["", "b"])
+        let focus = model.deleteEmptyRow(model.rows[0].id)
+        #expect(model.rows.map(\.text) == ["b"])
+        #expect(focus == TodoEditorModel.Focus(rowID: model.rows[0].id, caret: .start))
+    }
+
+    @Test("Forward delete in an empty row focuses the start of the row below")
+    func deleteForward() {
+        var model = model(["a", "", "c"])
+        let focus = model.deleteEmptyRow(model.rows[1].id, forward: true)
+        #expect(model.rows.map(\.text) == ["a", "c"])
+        #expect(focus == TodoEditorModel.Focus(rowID: model.rows[1].id, caret: .start))
+    }
+
+    @Test("Rows with text and the last remaining row are never removed")
+    func deleteGuards() {
+        var model = model(["a", "b"])
+        #expect(model.deleteEmptyRow(model.rows[0].id) == nil)
+        var single = self.model([""])
+        #expect(single.deleteEmptyRow(single.rows[0].id) == nil)
+        #expect(single.rows.count == 1)
+    }
+
+    @Test("Up and down move between rows and stop at the ends")
+    func arrows() {
+        let model = model(["a", "b"])
+        #expect(model.neighbor(of: model.rows[0].id, offset: 1)?.rowID == model.rows[1].id)
+        #expect(model.neighbor(of: model.rows[0].id, offset: -1) == nil)
+        #expect(model.neighbor(of: model.rows[1].id, offset: 1) == nil)
+    }
+}
+
+@Suite("Resume panel auto-close")
+@MainActor
+struct AutoCloseTimerTests {
+    final class Counter {
+        var value = 0
+    }
+
+    @Test("Fires once after the delay")
+    func fires() async throws {
+        let counter = Counter()
+        let timer = AutoCloseTimer(delay: 0.05) { counter.value += 1 }
+        timer.start()
+        #expect(timer.isScheduled)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(counter.value == 1)
+        #expect(!timer.isScheduled)
+    }
+
+    @Test("Paused while hovered; resuming starts the delay again")
+    func pauseAndResume() async throws {
+        let counter = Counter()
+        let timer = AutoCloseTimer(delay: 0.1) { counter.value += 1 }
+        timer.start()
+        timer.pause()
+        try await Task.sleep(for: .milliseconds(250))
+        #expect(counter.value == 0)
+        timer.resume()
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(counter.value == 1)
+    }
+
+    @Test("Closing cancels it")
+    func cancel() async throws {
+        let counter = Counter()
+        let timer = AutoCloseTimer(delay: 0.05) { counter.value += 1 }
+        timer.start()
+        timer.cancel()
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(counter.value == 0)
+    }
+
+    @Test("The Welcome back panel closes after 15 s")
+    func delay() {
+        #expect(SessionRules.resumePanelAutoCloseDelay == 15)
     }
 }

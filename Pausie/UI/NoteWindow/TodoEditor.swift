@@ -1,128 +1,82 @@
 import SwiftUI
 
 /// Markdown todo editor. Each line is a `- [ ]` row with its own text field:
-/// Return starts a new row, Backspace on an empty row removes it, ↑/↓ move between rows.
+/// Return starts a new row, Backspace in an empty row removes that todo, ↑/↓ move between rows.
 /// The bound markdown is the single source of truth (the session draft), so a draft typed in the
 /// note window shows up in the required-note editor (T5).
 struct TodoEditor: View {
     @Binding var markdown: String
     let placeholder: String
 
-    @State private var rows: [EditorRow] = []
-    @FocusState private var focusedRow: EditorRow.ID?
-
-    nonisolated struct EditorRow: Identifiable, Equatable, Sendable {
-        let id: UUID
-        var text: String
-
-        init(id: UUID = UUID(), text: String) {
-            self.id = id
-            self.text = text
-        }
-    }
+    @State private var model = TodoEditorModel(markdown: "")
+    @State private var focus: TodoEditorModel.Focus?
 
     var body: some View {
         EditorBox {
             VStack(alignment: .leading, spacing: Metrics.Editor.rowSpacing) {
-                ForEach($rows) { $row in
-                    rowView($row)
+                ForEach(model.rows) { row in
+                    rowView(row)
                 }
             }
         }
-        .onAppear(perform: loadRows)
-        .onChange(of: rows) { _, newRows in
-            let normalized = Self.normalize(newRows)
-            if normalized != newRows {
-                rows = normalized
-                return
-            }
-            let composed = TodoMarkdown.markdown(fromRows: newRows.map(\.text))
-            if composed != markdown { markdown = composed }
-        }
+        .onAppear(perform: load)
         .onChange(of: markdown) { _, newValue in
             // External change (e.g. a new cycle reset the draft): rebuild rows.
-            if newValue != TodoMarkdown.markdown(fromRows: rows.map(\.text)) { loadRows() }
+            if newValue != model.markdown { load() }
         }
     }
 
-    private func rowView(_ row: Binding<EditorRow>) -> some View {
-        let id = row.wrappedValue.id
-        let isLast = rows.last?.id == id
-        return HStack(alignment: .top, spacing: Metrics.TodoRow.spacing) {
+    private func rowView(_ row: TodoEditorModel.Row) -> some View {
+        HStack(alignment: .top, spacing: Metrics.TodoRow.spacing) {
             TodoCheckbox()
-            TextField(text: row.text, prompt: nil) {
-                Text(placeholder)
-            }
-            .textFieldStyle(.plain)
-            .font(TypographyToken.body.font)
-            .foregroundStyle(Color(.textPrimary))
-            .frame(minHeight: TypographyToken.body.spec.lineHeight)
-            .overlay(alignment: .leading) {
-                if row.wrappedValue.text.isEmpty && isLast {
-                    Text(placeholder)
-                        .font(TypographyToken.body.font)
-                        .foregroundStyle(Color(.textSecondary))
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+            TodoTextField(
+                text: Binding(
+                    get: { row.text },
+                    set: { newText in apply(model.setText(newText, for: row.id)) }
+                ),
+                placeholder: row.id == model.lastRowID ? placeholder : nil,
+                accessibilityLabel: placeholder,
+                focusCaret: focus?.rowID == row.id ? focus?.caret : nil,
+                onCommand: { handle($0, in: row.id) },
+                onFocusApplied: {
+                    if focus?.rowID == row.id { focus = nil }
                 }
-            }
-            .focused($focusedRow, equals: id)
-            .onSubmit { insertRow(after: id) }
-            .onKeyPress(.delete) { removeIfEmpty(id) ? .handled : .ignored }
-            .onKeyPress(.upArrow) { moveFocus(from: id, by: -1) ? .handled : .ignored }
-            .onKeyPress(.downArrow) { moveFocus(from: id, by: 1) ? .handled : .ignored }
+            )
+            .frame(minHeight: TypographyToken.body.spec.lineHeight)
         }
         .padding(.vertical, Metrics.TodoRow.verticalPadding)
     }
 
     // MARK: - Editing
 
-    private func loadRows() {
-        rows = TodoMarkdown.rowTexts(markdown).map { EditorRow(text: $0) }
-        focus(rows.last?.id)
+    private func load() {
+        model = TodoEditorModel(markdown: markdown)
+        focus = TodoEditorModel.Focus(rowID: model.lastRowID, caret: .end)
     }
 
-    private func insertRow(after id: EditorRow.ID) {
-        guard let index = rows.firstIndex(where: { $0.id == id }) else { return }
-        let row = EditorRow(text: "")
-        rows.insert(row, at: index + 1)
-        focus(row.id)
-    }
-
-    private func removeIfEmpty(_ id: EditorRow.ID) -> Bool {
-        guard rows.count > 1,
-              let index = rows.firstIndex(where: { $0.id == id }),
-              rows[index].text.isEmpty else { return false }
-        rows.remove(at: index)
-        focus(rows[max(0, index - 1)].id)
-        return true
-    }
-
-    private func moveFocus(from id: EditorRow.ID, by offset: Int) -> Bool {
-        guard let index = rows.firstIndex(where: { $0.id == id }) else { return false }
-        let target = index + offset
-        guard rows.indices.contains(target) else { return false }
-        focus(rows[target].id)
-        return true
-    }
-
-    private func focus(_ id: EditorRow.ID?) {
-        // The new field may not be in the hierarchy yet; focus on the next run loop turn.
-        DispatchQueue.main.async { focusedRow = id }
-    }
-
-    /// Splits pasted multi-line text and strips typed `- [ ]` markers so every row holds plain text.
-    nonisolated static func normalize(_ rows: [EditorRow]) -> [EditorRow] {
-        var result: [EditorRow] = []
-        for row in rows {
-            let texts = TodoMarkdown.rowTexts(row.text)
-            if texts == [row.text] {
-                result.append(row)
-            } else {
-                result.append(EditorRow(id: row.id, text: texts.first ?? ""))
-                result.append(contentsOf: texts.dropFirst().map { EditorRow(text: $0) })
-            }
+    private func handle(_ command: TodoTextField.Command, in rowID: UUID) -> Bool {
+        let newFocus: TodoEditorModel.Focus?
+        switch command {
+        case .newline:
+            newFocus = model.insertRow(after: rowID)
+        case .deleteBackwardWhenEmpty:
+            newFocus = model.deleteEmptyRow(rowID)
+        case .deleteForwardWhenEmpty:
+            newFocus = model.deleteEmptyRow(rowID, forward: true)
+        case .moveUp:
+            newFocus = model.neighbor(of: rowID, offset: -1)
+        case .moveDown:
+            newFocus = model.neighbor(of: rowID, offset: 1)
         }
-        return result.isEmpty ? [EditorRow(text: "")] : result
+        guard let newFocus else { return false }
+        apply(newFocus)
+        return true
+    }
+
+    /// Writes the rows back to the bound markdown and moves focus if an edit asked for it.
+    private func apply(_ newFocus: TodoEditorModel.Focus?) {
+        if let newFocus { focus = newFocus }
+        let composed = model.markdown
+        if composed != markdown { markdown = composed }
     }
 }

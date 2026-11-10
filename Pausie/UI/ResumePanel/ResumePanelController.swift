@@ -2,25 +2,42 @@ import AppKit
 import SwiftUI
 
 /// Shows the resume panel at the top right: after "Let's go!" / skip (T11, T12) or when a note is picked
-/// from Recent notes. It stays until closed and closes itself at the next warning (rule 8).
+/// from Recent notes. It closes itself after 15 s (paused while the pointer is over it), when the user
+/// closes it, or at the next warning (rule 8). The note stays reachable from Recent notes.
 @MainActor
 final class ResumePanelController {
     private var panel: ResumePanel?
+    private let autoCloseDelay: TimeInterval
+    private lazy var autoClose = AutoCloseTimer(delay: autoCloseDelay) { [weak self] in self?.close() }
+
+    init(autoCloseDelay: TimeInterval = SessionRules.resumePanelAutoCloseDelay) {
+        self.autoCloseDelay = autoCloseDelay
+    }
 
     var isVisible: Bool { panel?.isVisible == true }
 
     func show(note: Note) {
         let panel = panel ?? makePanel()
         self.panel = panel
-        let hosting = NSHostingController(rootView: ResumePanelView(note: note) { [weak self] in self?.close() })
+        let view = ResumePanelView(
+            note: note,
+            onClose: { [weak self] in self?.close() },
+            onHoverChange: { [weak self] hovering in
+                guard let self, isVisible else { return }
+                if hovering { autoClose.pause() } else { autoClose.resume() }
+            }
+        )
+        let hosting = NSHostingController(rootView: view)
         hosting.sizingOptions = .preferredContentSize
         panel.contentViewController = hosting
         panel.pinToTopRight(contentSize: hosting.view.fittingSize, inset: Metrics.ResumePanel.screenInset)
         panel.orderFrontRegardless()
         panel.makeKey()
+        autoClose.start()
     }
 
     func close() {
+        autoClose.cancel()
         guard let panel else { return }
         panel.orderOut(nil)
         panel.contentViewController = nil

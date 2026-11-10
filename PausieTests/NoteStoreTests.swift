@@ -56,11 +56,21 @@ struct NoteStoreTests {
 
 @Suite("TodoMarkdown")
 struct TodoMarkdownTests {
-    @Test("Trailing empty todo lines are dropped on save")
+    @Test("Empty todo lines are dropped on save, wherever they are")
     func normalize() {
         #expect(TodoMarkdown.normalizedForSave("- [ ] a\n- [ ] \n- [ ] ") == "- [ ] a")
-        #expect(TodoMarkdown.normalizedForSave("- [ ] a\n- [ ] \n- [ ] b") == "- [ ] a\n- [ ] \n- [ ] b")
+        #expect(TodoMarkdown.normalizedForSave("- [ ] a\n- [ ] \n- [ ] b") == "- [ ] a\n- [ ] b")
+        #expect(TodoMarkdown.normalizedForSave("- [ ] \n- [ ] a") == "- [ ] a")
         #expect(TodoMarkdown.normalizedForSave("- [ ] a\r\n\n") == "- [ ] a")
+    }
+
+    @Test("Older notes with empty todos display without them")
+    func displayLines() {
+        #expect(TodoMarkdown.displayLines("- [ ] a\n- [ ] \n\n- [ ] b") == [
+            .todo(text: "a", checked: false),
+            .todo(text: "b", checked: false),
+        ])
+        #expect(TodoMarkdown.displayLines("- [ ] \n- [ ] ").isEmpty)
     }
 
     @Test("A completely empty note is a valid save")
