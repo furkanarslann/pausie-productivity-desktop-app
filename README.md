@@ -108,16 +108,18 @@ The guide's proposals were used as defaults; change them here and in the spec if
   custom Figma popover (radius 10, `brand/primary` highlight).
 - **Note window (03b).** Centered on the main display, 600 pt wide, and it takes the keyboard when it
   opens so you can type right away (it's a non-activating panel, so Pausie doesn't come to the front).
-  Buttons: **Ask me later** (Esc) and **Save & take a break** (`⌘Return`). The break note-required
-  card (04) stays centered on the break layer.
-- **Flow changes from the spec.** "Save & keep working" was removed, and with it the "note saved"
-  state, "Take a break now" and "Edit note" (T3, T6, T7, T8). Instead:
+  Buttons: **Ask me later** (Esc) and **Save** (`⌘Return`); there is no early break from this window.
+  The break note-required card (04) stays centered on the break layer.
+- **Flow changes from the spec.**
+  - **Save (T3)** stores the note and work goes on; the break starts on time (T6). The menu then offers
+    "Take a break now" (T7) and "Edit note" (T8, "Save" only). "Save & take a break" (T4) was removed.
   - **Ask me later (T14/T15):** closes the note window and brings it back at 3 min and 1 min left
     (`SessionRules.noteReminderLeads`; a reminder less than 10 s away is skipped). The menu offers
     "Write note now" in the meantime. The draft is kept.
-  - **Time up (T5):** notes typed so far are saved and the break starts. Only if nothing was written
-    does the break screen ask for the note (the break timer waits, rule 1).
-- **Break ring (05).** The relaxed pose sits in a ring whose `brand/primary` arc shows the time left.
+  - **Notes are never lost:** when work time runs out, notes typed so far are saved and the break
+    starts (T5); edits in an open "Edit note" window are saved at time up or "Take a break now" (T6, T7).
+    Only if nothing was written does the break screen ask for the note (the break timer waits, rule 1).
+    Saving identical text keeps the note's original save time.
 - **Note editor.** Each todo is its own line and long todos wrap (the row grows), so the text and
   the caret stay visible. Return adds a todo (not from an empty one), Backspace in an empty todo
   removes it. ↑/↓ move through a todo's wrapped lines, then to the todo above (caret at its end) or

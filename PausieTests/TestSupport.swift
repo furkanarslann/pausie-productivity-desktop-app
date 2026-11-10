@@ -20,7 +20,7 @@ final class FakeClock: SessionClock, @unchecked Sendable {
 @MainActor
 final class RecordingPresenter: SessionPresenting {
     enum Call: Equatable {
-        case openNoteWindow
+        case openNoteWindow(NoteWindowMode)
         case closeNoteWindow
         case showBreakOverlay(BreakOverlayMode)
         case hideBreakOverlay
@@ -30,7 +30,7 @@ final class RecordingPresenter: SessionPresenting {
 
     private(set) var calls: [Call] = []
 
-    func openNoteWindow() { calls.append(.openNoteWindow) }
+    func openNoteWindow(mode: NoteWindowMode) { calls.append(.openNoteWindow(mode)) }
     func closeNoteWindow() { calls.append(.closeNoteWindow) }
     func showBreakOverlay(mode: BreakOverlayMode) { calls.append(.showBreakOverlay(mode)) }
     func hideBreakOverlay() { calls.append(.hideBreakOverlay) }
@@ -104,5 +104,11 @@ struct SessionHarness {
     func advance(seconds: TimeInterval) {
         clock.advance(seconds)
         controller.tick()
+    }
+
+    /// Saves a note in the note window, then takes the break from the menu (T3 + T7).
+    func saveNoteAndTakeBreak(_ markdown: String) {
+        controller.send(.saveNote(markdown: markdown))
+        controller.takeBreakNow()
     }
 }

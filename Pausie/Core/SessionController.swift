@@ -5,7 +5,7 @@ import os
 /// UI side of the effects. Implemented by the app coordinator, which owns the window controllers.
 @MainActor
 protocol SessionPresenting: AnyObject {
-    func openNoteWindow()
+    func openNoteWindow(mode: NoteWindowMode)
     func closeNoteWindow()
     func showBreakOverlay(mode: BreakOverlayMode)
     func hideBreakOverlay()
@@ -34,7 +34,7 @@ final class SessionController {
     /// Refreshed every tick; views read it to update countdowns.
     private(set) var now: Date
     /// The note being written in this cycle. Shared by the note window and the required-note editor;
-    /// it survives "Ask me later" and is saved automatically when work time runs out (T5).
+    /// it survives "Ask me later" and is saved automatically when work time runs out (T5, T6).
     var draft: String = TodoMarkdown.template
     /// The note saved in this cycle, if any. Saving again updates the same record.
     private(set) var currentNote: Note?
@@ -152,7 +152,7 @@ final class SessionController {
            let remaining = workRemaining, remaining <= reminder {
             send(.noteReminder)
         }
-        if state == .preBreakPending || state == .preBreakSnoozed,
+        if state == .preBreakPending || state == .preBreakSnoozed || state == .preBreakNoted,
            !isWorkPaused, let remaining = workRemaining, remaining <= 0 {
             send(.workTimeUp(draft: draft))
         }
@@ -171,6 +171,16 @@ final class SessionController {
     /// "Write note now" in the menu while snoozed (T15).
     func writeNoteNow() {
         send(.noteReminder)
+    }
+
+    /// "Take a break now" in the menu after saving (T7).
+    func takeBreakNow() {
+        send(.takeBreakNow(draft: draft))
+    }
+
+    /// "Edit note" in the menu after saving (T8).
+    func editNote() {
+        send(.editNote)
     }
 
     // MARK: - Skip break (T12)
@@ -254,9 +264,13 @@ final class SessionController {
             noteReminderAt = nil
             stopTicking()
 
-        case .openNoteWindow:
+        case let .openNoteWindow(mode):
             noteReminderAt = nil
-            presenter?.openNoteWindow()
+            if mode == .edit {
+                let saved = currentNote?.markdown ?? ""
+                draft = saved.isEmpty ? TodoMarkdown.template : saved
+            }
+            presenter?.openNoteWindow(mode: mode)
 
         case .scheduleNoteReminder:
             // The first reminder still ahead (with a little gap); none left means the next prompt is at time up.
@@ -277,11 +291,15 @@ final class SessionController {
         case let .persistNote(markdown):
             let date = clock.now
             let normalized = TodoMarkdown.normalizedForSave(markdown)
+            // Saving the same text again (e.g. at time up after "Save") keeps the original save time.
+            if let currentNote, currentNote.markdown == normalized { break }
             var note = currentNote ?? Note(id: UUID(), markdown: normalized, createdAt: date, updatedAt: date)
             note.markdown = normalized
             note.updatedAt = date
             noteStore.upsert(note)
             currentNote = note
+            // The draft now matches what was saved, so a later save of it (time up, T7) changes nothing.
+            draft = note.markdown.isEmpty ? TodoMarkdown.template : note.markdown
 
         case .playChime:
             chime.play()

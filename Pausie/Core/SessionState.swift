@@ -10,6 +10,8 @@ enum SessionState: Equatable, Sendable {
     case preBreakPending
     /// "Ask me later": note window closed, it reopens at 3 and 1 min left.
     case preBreakSnoozed
+    /// Note saved in the last 5 min; work goes on until the break starts on time.
+    case preBreakNoted
     /// Work time ended without a note; break timer not started.
     case breakNoteRequired
     /// Break timer running.
@@ -20,7 +22,7 @@ enum SessionState: Equatable, Sendable {
     /// States in which the work timer counts down.
     var isWorkPhase: Bool {
         switch self {
-        case .working, .preBreakPending, .preBreakSnoozed: true
+        case .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted: true
         default: false
         }
     }

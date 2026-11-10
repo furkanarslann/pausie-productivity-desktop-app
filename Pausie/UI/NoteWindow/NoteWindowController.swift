@@ -16,10 +16,10 @@ final class NoteWindowController {
     var frame: NSRect? { panel?.frame }
     var window: NSWindow? { panel }
 
-    func show() {
+    func show(mode: NoteWindowMode) {
         let panel = panel ?? makePanel()
         self.panel = panel
-        let (_, size) = panel.hostSizedContent(NoteWindowView(session: session), width: Metrics.NoteWindow.width)
+        let (_, size) = panel.hostSizedContent(NoteWindowView(session: session, mode: mode), width: Metrics.NoteWindow.width)
         panel.centerOnMainScreen(contentSize: size)
 
         if panel.isMiniaturized { panel.deminiaturize(nil) }

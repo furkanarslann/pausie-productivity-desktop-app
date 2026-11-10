@@ -21,16 +21,24 @@ struct SessionMachineTests {
     func t2() {
         #expect(reduce(.working, .warningReached) == SessionTransition(
             state: .preBreakPending,
-            effects: [.closeResumePanel, .openNoteWindow]
+            effects: [.closeResumePanel, .openNoteWindow(.pending)]
         ))
     }
 
-    @Test("T4 preBreakPending --saveNoteAndBreak--> onBreak")
-    func t4() {
-        #expect(reduce(.preBreakPending, .saveNoteAndBreak(markdown: "- [ ] a")) == SessionTransition(
-            state: .onBreak,
-            effects: breakEffects("- [ ] a")
+    @Test("T3 preBreakPending --saveNote--> preBreakNoted: keep working")
+    func t3() {
+        #expect(reduce(.preBreakPending, .saveNote(markdown: "- [ ] a")) == SessionTransition(
+            state: .preBreakNoted,
+            effects: [.persistNote("- [ ] a"), .closeNoteWindow]
         ))
+    }
+
+    @Test("The note window offers no early break")
+    func noEarlyBreakFromNoteWindow() {
+        for event in [SessionEvent.saveNote(markdown: "- [ ] a"), .askLater] {
+            #expect(reduce(.preBreakPending, event)?.state != .onBreak)
+        }
+        #expect(reduce(.preBreakPending, .takeBreakNow(draft: "- [ ] a")) == nil)
     }
 
     @Test("T5 with an empty draft: the break screen asks first, break timer not started", arguments: [
@@ -53,6 +61,25 @@ struct SessionMachineTests {
     func t5DraftWithText(from state: SessionState) {
         let draft = "- [ ] half-written thought\n- [ ] "
         #expect(reduce(state, .workTimeUp(draft: draft)) == SessionTransition(state: .onBreak, effects: breakEffects(draft)))
+    }
+
+    @Test("T6 preBreakNoted --workTimeUp--> onBreak, saving any edits")
+    func t6() {
+        #expect(reduce(.preBreakNoted, .workTimeUp(draft: "- [ ] a")) == SessionTransition(state: .onBreak, effects: breakEffects("- [ ] a")))
+    }
+
+    @Test("T7 preBreakNoted --takeBreakNow--> onBreak, saving any edits")
+    func t7() {
+        #expect(reduce(.preBreakNoted, .takeBreakNow(draft: "- [ ] a")) == SessionTransition(state: .onBreak, effects: breakEffects("- [ ] a")))
+    }
+
+    @Test("T8 preBreakNoted --editNote, then saveNote--> preBreakNoted")
+    func t8() {
+        #expect(reduce(.preBreakNoted, .editNote) == SessionTransition(state: .preBreakNoted, effects: [.openNoteWindow(.edit)]))
+        #expect(reduce(.preBreakNoted, .saveNote(markdown: "- [ ] b")) == SessionTransition(
+            state: .preBreakNoted,
+            effects: [.persistNote("- [ ] b"), .closeNoteWindow]
+        ))
     }
 
     @Test("T9 breakNoteRequired --saveRequiredNote--> onBreak")
@@ -84,7 +111,9 @@ struct SessionMachineTests {
         ))
     }
 
-    @Test("T13 stop from work states --> idle", arguments: [SessionState.working, .preBreakPending, .preBreakSnoozed])
+    @Test("T13 stop from work states --> idle", arguments: [
+        SessionState.working, .preBreakPending, .preBreakSnoozed, .preBreakNoted,
+    ])
     func t13(from state: SessionState) {
         #expect(reduce(state, .stop) == SessionTransition(state: .idle, effects: [.stopTimers, .closeNoteWindow]))
     }
@@ -99,7 +128,7 @@ struct SessionMachineTests {
 
     @Test("T15 preBreakSnoozed --noteReminder--> preBreakPending")
     func t15() {
-        #expect(reduce(.preBreakSnoozed, .noteReminder) == SessionTransition(state: .preBreakPending, effects: [.openNoteWindow]))
+        #expect(reduce(.preBreakSnoozed, .noteReminder) == SessionTransition(state: .preBreakPending, effects: [.openNoteWindow(.pending)]))
     }
 
     // MARK: - Rules
@@ -119,7 +148,7 @@ struct SessionMachineTests {
 
     @Test("Skipping is only possible from a running break")
     func skipOnlyFromBreak() {
-        for state in [SessionState.idle, .working, .preBreakPending, .preBreakSnoozed, .breakNoteRequired, .breakOver] {
+        for state in [SessionState.idle, .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted, .breakNoteRequired, .breakOver] {
             #expect(reduce(state, .skipBreakConfirmed) == nil)
         }
     }
@@ -127,9 +156,10 @@ struct SessionMachineTests {
     @Test("Rules 1 and 4: every path into a break saves a note, then starts the break timer")
     func everyBreakPathSavesANote() {
         let pathsIntoBreak: [(SessionState, SessionEvent)] = [
-            (.preBreakPending, .saveNoteAndBreak(markdown: "")),
             (.preBreakPending, .workTimeUp(draft: "- [ ] x")),
             (.preBreakSnoozed, .workTimeUp(draft: "- [ ] x")),
+            (.preBreakNoted, .workTimeUp(draft: "- [ ] x")),
+            (.preBreakNoted, .takeBreakNow(draft: "- [ ] x")),
             (.breakNoteRequired, .saveRequiredNote(markdown: "")),
         ]
         for (state, event) in pathsIntoBreak {
@@ -148,9 +178,13 @@ struct SessionMachineTests {
         #expect(reduce(.working, .workTimeUp(draft: "- [ ] x")) == nil)
         #expect(reduce(.working, .askLater) == nil)
         #expect(reduce(.working, .noteReminder) == nil)
+        #expect(reduce(.working, .editNote) == nil)
         #expect(reduce(.preBreakPending, .noteReminder) == nil)
+        #expect(reduce(.preBreakPending, .editNote) == nil)
         #expect(reduce(.preBreakSnoozed, .askLater) == nil)
-        #expect(reduce(.preBreakSnoozed, .saveNoteAndBreak(markdown: "")) == nil)
+        #expect(reduce(.preBreakSnoozed, .saveNote(markdown: "")) == nil)
+        #expect(reduce(.preBreakNoted, .askLater) == nil)
+        #expect(reduce(.preBreakNoted, .noteReminder) == nil)
         #expect(reduce(.onBreak, .saveRequiredNote(markdown: "")) == nil)
         #expect(reduce(.breakOver, .breakTimeUp) == nil)
     }

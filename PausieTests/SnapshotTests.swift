@@ -48,23 +48,27 @@ struct SnapshotTests {
             h.advance(minutes: 45)
             h.controller.askLater()
             h.advance(minutes: 1.8)
+        case .preBreakNoted:
+            h.advance(minutes: 45)
+            h.controller.send(.saveNote(markdown: "- [ ] Finish validation"))
+            h.advance(minutes: 1.8)
         case .breakNoteRequired:
             h.advance(minutes: 50)
             h.controller.draft = "- [ ] Continue the settings screen layout\n- [ ] "
         case .onBreak:
             h.advance(minutes: 45)
-            h.controller.send(.saveNoteAndBreak(markdown: "- [ ] Finish validation on the login screen\n- [ ] Reply to PR review comments"))
+            h.saveNoteAndTakeBreak("- [ ] Finish validation on the login screen\n- [ ] Reply to PR review comments")
             h.advance(minutes: 1.3)
         case .breakOver:
             h.advance(minutes: 45)
-            h.controller.send(.saveNoteAndBreak(markdown: "- [ ] a"))
+            h.saveNoteAndTakeBreak("- [ ] a")
             h.advance(minutes: 10)
         }
         return h
     }
 
     @Test func menuHeaders() throws {
-        for state in [SessionState.idle, .working, .preBreakSnoozed, .onBreak, .breakNoteRequired, .breakOver] {
+        for state in [SessionState.idle, .working, .preBreakSnoozed, .preBreakNoted, .onBreak, .breakNoteRequired, .breakOver] {
             let h = harness(at: state)
             try render("01-menu-header-\(state)", MenuHeaderContent(header: MenuPresentation(session: h.controller).header)
                 .background(Color(.surfaceWindow)))
@@ -81,7 +85,8 @@ struct SnapshotTests {
 
     @Test func noteWindow() throws {
         let h = harness(at: .preBreakPending)
-        try render("03-note-window", NoteWindowView(session: h.controller))
+        try render("03-note-window-pending", NoteWindowView(session: h.controller, mode: .pending))
+        try render("03-note-window-edit", NoteWindowView(session: h.controller, mode: .edit))
     }
 
     @Test func breakCards() throws {

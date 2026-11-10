@@ -150,7 +150,7 @@ struct WindowTests {
         h.advance(minutes: 45)
         h.controller.draft = "- [ ] one\n- [ ] two\n- [ ] three"
         let controller = NoteWindowController(session: h.controller)
-        controller.show()
+        controller.show(mode: .pending)
         try await settle(0.5)
         let window = try #require(controller.window)
         #expect(editedRowText(in: window) == "three")
@@ -183,7 +183,7 @@ struct WindowTests {
         h.advance(minutes: 45)
         h.controller.draft = "- [ ] short\n- [ ] \(long)\n- [ ] last"
         let controller = NoteWindowController(session: h.controller)
-        controller.show()
+        controller.show(mode: .pending)
         try await settle(0.5)
         let window = try #require(controller.window)
         #expect(editedRowText(in: window) == "last")
@@ -216,7 +216,7 @@ struct WindowTests {
         h.advance(minutes: 45)
         h.controller.draft = Self.longNote
         let window = NoteWindowController(session: h.controller)
-        window.show()
+        window.show(mode: .pending)
         spinRunLoop(0.5)
         #expect(window.isVisible)
         let before = try #require(window.frame)

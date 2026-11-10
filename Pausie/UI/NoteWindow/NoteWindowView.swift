@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Screen 03b: centered on the main display, editor focused on open.
-/// "Ask me later" (T14) closes it until the next reminder; "Save & take a break" (T4) starts the break.
+/// Screen 03b: centered on the main display, editor focused on open. There is no early break here:
+/// "Save" (T3) keeps working until the break starts on time; "Ask me later" (T14) closes it until the
+/// next reminder. Opened from "Edit note" (T8) it only has "Save".
 struct NoteWindowView: View {
     @Bindable var session: SessionController
+    let mode: NoteWindowMode
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.NoteWindow.contentSpacing) {
@@ -41,15 +43,17 @@ struct NoteWindowView: View {
     private var actions: some View {
         HStack(spacing: Metrics.NoteWindow.actionSpacing) {
             Spacer(minLength: 0)
-            // Not ready yet: the window comes back at 3 and 1 min left, then the break screen asks.
-            Button(L10n.t(.noteWindowActionAskLater)) {
-                session.askLater()
+            if mode == .pending {
+                // Not ready yet: the window comes back at 3 and 1 min left, then the break screen asks.
+                Button(L10n.t(.noteWindowActionAskLater)) {
+                    session.askLater()
+                }
+                .buttonStyle(.pausieSecondary)
+                .keyboardShortcut(.cancelAction)
             }
-            .buttonStyle(.pausieSecondary)
-            .keyboardShortcut(.cancelAction)
 
-            Button(L10n.t(.noteWindowActionSaveAndBreak)) {
-                session.send(.saveNoteAndBreak(markdown: session.draft))
+            Button(L10n.t(.noteWindowActionSave)) {
+                session.send(.saveNote(markdown: session.draft))
             }
             .buttonStyle(.pausiePrimary)
             .keyboardShortcut(.return, modifiers: .command)

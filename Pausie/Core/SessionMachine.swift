@@ -9,9 +9,9 @@ struct SessionTransition: Equatable, Sendable {
 /// Pure reducer: `(state, event) -> (state, [effect])`. It never touches UI, timers or disk.
 /// Pairs not listed return `nil` and are ignored.
 ///
-/// Transition numbers follow the spec. T3, T6, T7 and T8 ("Save & keep working", the noted state, "Take a
-/// break now", "Edit note") were removed; T14 and T15 ("Ask me later" and its reminders) were added, and T5
-/// now saves a draft that has text instead of always asking.
+/// Transition numbers follow the spec, with these changes: the note window no longer offers an early
+/// break (T4 removed; "Save" is T3), "Ask me later" and its reminders are T14 and T15, and notes typed so
+/// far are saved when work time runs out (T5, T6) or the break is taken from the menu (T7).
 enum SessionMachine {
     static func reduce(_ state: SessionState, _ event: SessionEvent) -> SessionTransition? {
         switch (state, event) {
@@ -21,11 +21,11 @@ enum SessionMachine {
 
         // T2
         case (.working, .warningReached):
-            return SessionTransition(state: .preBreakPending, effects: [.closeResumePanel, .openNoteWindow])
+            return SessionTransition(state: .preBreakPending, effects: [.closeResumePanel, .openNoteWindow(.pending)])
 
-        // T4
-        case let (.preBreakPending, .saveNoteAndBreak(markdown)):
-            return startBreak(saving: markdown)
+        // T3 (save), T8 (save after "Edit note"): keep working; the break starts on time.
+        case let (.preBreakPending, .saveNote(markdown)), let (.preBreakNoted, .saveNote(markdown)):
+            return SessionTransition(state: .preBreakNoted, effects: [.persistNote(markdown), .closeNoteWindow])
 
         // T14
         case (.preBreakPending, .askLater):
@@ -33,7 +33,7 @@ enum SessionMachine {
 
         // T15
         case (.preBreakSnoozed, .noteReminder):
-            return SessionTransition(state: .preBreakPending, effects: [.openNoteWindow])
+            return SessionTransition(state: .preBreakPending, effects: [.openNoteWindow(.pending)])
 
         // T5: notes typed so far are never lost. With text they are saved and the break starts; an empty
         // draft means the user hasn't answered yet, so the break screen asks (the break timer waits, rule 1).
@@ -42,6 +42,15 @@ enum SessionMachine {
                 return startBreak(saving: draft)
             }
             return SessionTransition(state: .breakNoteRequired, effects: [.closeNoteWindow, .showBreakOverlay(.noteRequired)])
+
+        // T6 (time up), T7 ("Take a break now"): the note is already saved; unsaved edits from an open
+        // "Edit note" window are saved too.
+        case let (.preBreakNoted, .workTimeUp(draft)), let (.preBreakNoted, .takeBreakNow(draft)):
+            return startBreak(saving: draft)
+
+        // T8: open
+        case (.preBreakNoted, .editNote):
+            return SessionTransition(state: .preBreakNoted, effects: [.openNoteWindow(.edit)])
 
         // T9
         case let (.breakNoteRequired, .saveRequiredNote(markdown)):
@@ -64,7 +73,7 @@ enum SessionMachine {
             return SessionTransition(state: .working, effects: [.hideBreakOverlay, .showResumePanel, .startCycle])
 
         // T13
-        case (.working, .stop), (.preBreakPending, .stop), (.preBreakSnoozed, .stop):
+        case (.working, .stop), (.preBreakPending, .stop), (.preBreakSnoozed, .stop), (.preBreakNoted, .stop):
             return SessionTransition(state: .idle, effects: [.stopTimers, .closeNoteWindow])
 
         default:

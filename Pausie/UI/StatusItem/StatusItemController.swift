@@ -113,6 +113,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             return actionItem(.menuItemStop, #selector(stop))
         case .writeNote:
             return actionItem(.menuItemWriteNote, #selector(writeNote))
+        case .takeBreakNow:
+            return actionItem(.menuItemTakeBreakNow, #selector(takeBreakNow))
+        case .editNote:
+            return actionItem(.menuItemEditNote, #selector(editNote))
         case .skipBreak:
             return actionItem(.menuItemSkipBreak, #selector(skipBreak))
         case .recentNotes:
@@ -137,6 +141,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     @objc private func start() { session.send(.start) }
     @objc private func stop() { session.send(.stop) }
     @objc private func writeNote() { session.writeNoteNow() }
+    @objc private func takeBreakNow() { session.takeBreakNow() }
+    @objc private func editNote() { session.editNote() }
     @objc private func skipBreak() { actions?.requestSkipBreak() }
     @objc private func openSettings() { actions?.showSettings() }
     @objc private func quit() { NSApp.terminate(nil) }

@@ -6,6 +6,8 @@ struct MenuPresentation: Equatable {
         case start
         case stop
         case writeNote
+        case takeBreakNow
+        case editNote
         case skipBreak
         case recentNotes
         case settings
@@ -60,7 +62,7 @@ struct MenuPresentation: Equatable {
         switch snapshot.state {
         case .idle:
             nil
-        case .working, .preBreakPending, .preBreakSnoozed:
+        case .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted:
             snapshot.workRemaining.map(TimeFormat.countdown)
         case .breakNoteRequired:
             L10n.t(.menubarTitleBreak)
@@ -89,6 +91,13 @@ struct MenuPresentation: Equatable {
                 pose: .focused,
                 title: L10n.t(.menuHeaderWorkingTitle),
                 subtitle: L10n.t(.menuHeaderWorkingSubtitle, ["remaining": remaining, "time": workEnd]),
+                progress: snapshot.workProgress ?? 0
+            )
+        case .preBreakNoted:
+            return Header(
+                pose: .takingNotes,
+                title: L10n.t(.menuHeaderNotedTitle),
+                subtitle: L10n.t(.menuHeaderNotedSubtitle, ["remaining": remaining]),
                 progress: snapshot.workProgress ?? 0
             )
         case .breakNoteRequired:
@@ -129,6 +138,8 @@ struct MenuPresentation: Equatable {
             return [.separator] + common + [.separator, .stop, .separator, .quit]
         case .preBreakSnoozed:
             return [.separator, .writeNote, .separator] + common + [.separator, .stop, .separator, .quit]
+        case .preBreakNoted:
+            return [.separator, .takeBreakNow, .editNote, .separator] + common + [.separator, .stop, .separator, .quit]
         case .onBreak:
             return [.separator, .skipBreak, .separator] + common + [.separator, .quit]
         case .breakNoteRequired, .breakOver:

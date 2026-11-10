@@ -55,8 +55,8 @@ final class AppCoordinator {
 }
 
 extension AppCoordinator: SessionPresenting {
-    func openNoteWindow() {
-        noteWindow.show()
+    func openNoteWindow(mode: NoteWindowMode) {
+        noteWindow.show(mode: mode)
     }
 
     func closeNoteWindow() {

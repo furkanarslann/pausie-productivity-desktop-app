@@ -20,7 +20,7 @@ struct SessionControllerTests {
         #expect(h.controller.state == .working)
         h.advance(seconds: 1)
         #expect(h.controller.state == .preBreakPending)
-        #expect(h.presenter.calls == [.closeResumePanel, .openNoteWindow])
+        #expect(h.presenter.calls == [.closeResumePanel, .openNoteWindow(.pending)])
 
         // Only once.
         h.presenter.reset()
@@ -44,7 +44,7 @@ struct SessionControllerTests {
         #expect(h.controller.state == .preBreakSnoozed)
         h.advance(seconds: 1) // 3:00 left
         #expect(h.controller.state == .preBreakPending)
-        #expect(h.presenter.calls.last == .openNoteWindow)
+        #expect(h.presenter.calls.last == .openNoteWindow(.pending))
 
         h.controller.askLater()
         #expect(h.controller.noteReminderAt == TimeInterval(1 * 60))
@@ -79,7 +79,7 @@ struct SessionControllerTests {
         h.presenter.reset()
         h.controller.writeNoteNow()
         #expect(h.controller.state == .preBreakPending)
-        #expect(h.presenter.calls == [.openNoteWindow])
+        #expect(h.presenter.calls == [.openNoteWindow(.pending)])
         #expect(h.controller.noteReminderAt == nil)
     }
 
@@ -105,15 +105,93 @@ struct SessionControllerTests {
         #expect(h.controller.noteReminderAt == nil)
     }
 
-    @Test("T4: save & take a break skips the remaining work time")
-    func saveAndBreak() {
+    @Test("T3 + T6: Save keeps working; the break starts on time with the saved note")
+    func saveKeepsWorking() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 46)
+        h.controller.send(.saveNote(markdown: "- [ ] write tests\n- [ ] "))
+        #expect(h.controller.state == .preBreakNoted)
+        #expect(h.noteStore.notes.first?.markdown == "- [ ] write tests")
+        #expect(h.presenter.calls.last == .closeNoteWindow)
+        #expect(h.controller.workRemaining == TimeInterval(4 * 60))
+
+        h.advance(minutes: 3)
+        #expect(h.controller.state == .preBreakNoted)
+        h.advance(minutes: 1)
+        #expect(h.controller.state == .onBreak)
+        #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
+        #expect(h.noteStore.notes.count == 1)
+    }
+
+    @Test("T6: a break starting after Save keeps the note's save time")
+    func timeUpKeepsSaveTime() throws {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 46)
+        h.controller.send(.saveNote(markdown: "- [ ] a"))
+        let savedAt = try #require(h.noteStore.latest?.updatedAt)
+        h.advance(minutes: 4)
+        #expect(h.controller.state == .onBreak)
+        #expect(h.noteStore.latest?.updatedAt == savedAt)
+    }
+
+    @Test("T7: take a break now from the menu after saving")
+    func takeBreakNow() {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndBreak(markdown: "- [ ] a"))
+        h.controller.takeBreakNow() // not saved yet: ignored
+        #expect(h.controller.state == .preBreakPending)
+        h.saveNoteAndTakeBreak("- [ ] a")
         #expect(h.controller.state == .onBreak)
         #expect(h.controller.workRemaining == nil)
         #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
+        #expect(h.noteStore.latest?.markdown == "- [ ] a")
+    }
+
+    @Test("T8: Edit note updates the same record; no duplicate in history")
+    func editNoteUpdatesSameRecord() throws {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.send(.saveNote(markdown: "- [ ] first"))
+        let id = try #require(h.controller.currentNote?.id)
+
+        h.controller.editNote()
+        #expect(h.controller.state == .preBreakNoted)
+        #expect(h.controller.draft == "- [ ] first")
+        #expect(h.presenter.calls.last == .openNoteWindow(.edit))
+
+        h.controller.send(.saveNote(markdown: "- [ ] first\n- [ ] second"))
+        #expect(h.noteStore.notes.count == 1)
+        #expect(h.noteStore.notes.first?.id == id)
+        #expect(h.noteStore.notes.first?.markdown == "- [ ] first\n- [ ] second")
+    }
+
+    @Test("Edits in an open Edit note window are saved when time runs out")
+    func timeUpWhileEditingSavesEdits() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.send(.saveNote(markdown: "- [ ] first"))
+        h.controller.editNote()
+        h.controller.draft = "- [ ] first\n- [ ] added while editing"
+        h.advance(minutes: 5)
+        #expect(h.controller.state == .onBreak)
+        #expect(h.noteStore.notes.count == 1)
+        #expect(h.noteStore.latest?.markdown == "- [ ] first\n- [ ] added while editing")
+    }
+
+    @Test("Edit of an empty saved note opens with the todo template")
+    func editEmptyNote() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.send(.saveNote(markdown: "- [ ] "))
+        #expect(h.noteStore.latest?.markdown == "")
+        h.controller.editNote()
+        #expect(h.controller.draft == TodoMarkdown.template)
     }
 
     @Test("T5 + T9 + rule 1: nothing written means the break timer waits for the save")
@@ -172,7 +250,7 @@ struct SessionControllerTests {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndBreak(markdown: "- [ ] first\n- [ ] \n- [ ] third"))
+        h.saveNoteAndTakeBreak("- [ ] first\n- [ ] \n- [ ] third")
         #expect(h.noteStore.latest?.markdown == "- [ ] first\n- [ ] third")
     }
 
@@ -181,7 +259,7 @@ struct SessionControllerTests {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndBreak(markdown: "- [ ] resume here"))
+        h.saveNoteAndTakeBreak("- [ ] resume here")
         let note = try #require(h.controller.currentNote)
 
         h.advance(minutes: 9)
@@ -208,7 +286,7 @@ struct SessionControllerTests {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndBreak(markdown: "- [ ] x"))
+        h.saveNoteAndTakeBreak("- [ ] x")
         let note = try #require(h.controller.currentNote)
 
         h.controller.confirmSkipBreak() // no confirmation shown yet: nothing happens
@@ -240,7 +318,7 @@ struct SessionControllerTests {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndBreak(markdown: ""))
+        h.saveNoteAndTakeBreak("")
         h.controller.requestSkipBreak()
         h.advance(minutes: 10)
         #expect(h.controller.state == .breakOver)
@@ -279,7 +357,7 @@ struct SessionControllerTests {
         #expect(h.controller.workRemaining == TimeInterval(40 * 60))
 
         h.advance(minutes: 35)
-        h.controller.send(.saveNoteAndBreak(markdown: ""))
+        h.saveNoteAndTakeBreak("")
         #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
 
         h.advance(minutes: 10)
@@ -325,7 +403,7 @@ struct SessionControllerTests {
         let h = SessionHarness()
         h.controller.send(.start)
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndBreak(markdown: ""))
+        h.saveNoteAndTakeBreak("")
         h.controller.systemPaused(.sleep)
         h.clock.advance(minutes: 15) // no ticks while asleep
         #expect(h.controller.state == .onBreak)
@@ -354,7 +432,7 @@ struct SessionControllerTests {
         h.controller.send(.start)
         #expect(h.controller.workEndsAt == h.clock.now.addingTimeInterval(50 * 60))
         h.advance(minutes: 45)
-        h.controller.send(.saveNoteAndBreak(markdown: ""))
+        h.saveNoteAndTakeBreak("")
         #expect(h.controller.breakProgress == 0)
         h.advance(minutes: 5)
         #expect(abs(h.controller.breakProgress - 0.5) < 0.0001)
@@ -368,7 +446,7 @@ struct SessionControllerTests {
         h.advance(minutes: 51)
         #expect(h.controller.state == .breakNoteRequired)
         #expect(h.presenter.calls == [
-            .closeResumePanel, .openNoteWindow, .closeNoteWindow, .showBreakOverlay(.noteRequired),
+            .closeResumePanel, .openNoteWindow(.pending), .closeNoteWindow, .showBreakOverlay(.noteRequired),
         ])
     }
 }
