@@ -5,8 +5,8 @@ file, with when it was decided, who asked for it, why, and the commit that made 
 as a whole is in [FLOW.md](FLOW.md).
 
 The *Pausie MVP Spec* doc was brought in line with D1–D13 on 2026-11-10 (states, transitions T1–T15,
-rules, screens, the state diagram, and a "Kararlar (4. tur, uygulama sırasında)" section). Keep both in
-step: a new decision goes here and into the spec.
+rules, screens, the state diagram, and a "Kararlar (4. tur, uygulama sırasında)" section); D14 was added
+to that section the same day. Keep both in step: a new decision goes here and into the spec.
 
 Add an entry whenever behavior changes on purpose: newest at the bottom, one entry per decision, and
 mark entries that a later decision replaced instead of deleting them.
