@@ -26,14 +26,14 @@ struct WindowTests {
     func resumePanelWithLongNote() throws {
         let note = Note(id: UUID(), markdown: Self.longNote, createdAt: Date(), updatedAt: Date())
         let controller = ResumePanelController(autoCloseDelay: 60)
-        controller.show(note: note)
+        controller.show(note: note, origin: .recentNotes)
         spinRunLoop(0.5)
         #expect(controller.isVisible)
 
         // Showing another note in the same panel resizes it again.
-        controller.show(note: Note(id: UUID(), markdown: "- [ ] short", createdAt: Date(), updatedAt: Date()))
+        controller.show(note: Note(id: UUID(), markdown: "- [ ] short", createdAt: Date(), updatedAt: Date()), origin: .breakEnded)
         spinRunLoop(0.3)
-        controller.show(note: note)
+        controller.show(note: note, origin: .recentNotes)
         spinRunLoop(0.3)
         controller.close()
         #expect(!controller.isVisible)
@@ -60,7 +60,7 @@ struct WindowTests {
     func resumePanelWithWrappingNotes() throws {
         let controller = ResumePanelController(autoCloseDelay: 60)
         for note in Self.wrappingNotes() {
-            controller.show(note: note)
+            controller.show(note: note, origin: .recentNotes)
             spinRunLoop(0.15)
             #expect(controller.isVisible)
             let settled = controller.frame
@@ -79,7 +79,7 @@ struct WindowTests {
         let notes = NoteStore(fileURL: URL(fileURLWithPath: path)).notes
         let controller = ResumePanelController(autoCloseDelay: 60)
         for note in notes {
-            controller.show(note: note)
+            controller.show(note: note, origin: .recentNotes)
             spinRunLoop(0.4)
             #expect(controller.isVisible)
         }
@@ -91,7 +91,7 @@ struct WindowTests {
         let suite = "PausieWindowTests-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let controller = SettingsWindowController(store: SettingsStore(defaults: defaults))
+        let controller = SettingsWindowController(store: SettingsStore(defaults: defaults), player: ChimePlayer())
         controller.show()
         spinRunLoop(0.4)
         let frame = try #require(controller.frame)

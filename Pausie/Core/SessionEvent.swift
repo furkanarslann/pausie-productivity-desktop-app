@@ -11,11 +11,13 @@ enum SessionEvent: Equatable, Sendable {
     /// T14: "Ask me later" closes the note window; it comes back at 3 and 1 min left.
     case askLater
     /// T15: a reminder (3 or 1 min left) or "Write note now" in the menu reopens the note window.
+    /// T20: "Write note now" after skipping the note.
     case noteReminder
     /// T5, T6: work time is over. Notes typed so far are saved and the break starts; with nothing
     /// written yet, the break screen asks for the note first.
     case workTimeUp(draft: String)
     /// T7: "Take a break now" in the menu after the note was saved; unsaved edits are kept.
+    /// T19: the same after the note was skipped; nothing is saved.
     case takeBreakNow(draft: String)
     /// T8: "Edit note" in the menu reopens the saved note.
     case editNote
@@ -29,4 +31,10 @@ enum SessionEvent: Equatable, Sendable {
     case skipBreakConfirmed
     /// T13
     case stop
+    /// T16: "Pause" in the menu freezes the work timer.
+    case pause
+    /// T17: "Resume" in the menu starts it again.
+    case resume
+    /// T18 (note window), T21 (break note card): nothing to note this cycle.
+    case skipNote
 }

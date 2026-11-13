@@ -1,20 +1,27 @@
 import AppKit
 import SwiftUI
 
-/// Status item content: the template icon and the countdown, whose changing digits roll in.
+/// Status item content: the template icon and the countdown, whose changing digits roll in. While paused
+/// from the menu (T16) a pause sign sits before the frozen countdown.
 struct StatusItemLabel: View {
     let session: SessionController
     let icon: NSImage?
 
     var body: some View {
-        let title = MenuPresentation(session: session).title
+        let presentation = MenuPresentation(session: session)
         HStack(spacing: Metrics.StatusItem.spacing) {
             if let icon {
                 Image(nsImage: icon)
                     .renderingMode(.template)
             }
-            if let title {
-                RollingText(text: title, font: TypographyToken.menuBarTitle.font)
+            if let title = presentation.title {
+                HStack(spacing: Metrics.StatusItem.pausedSpacing) {
+                    if presentation.isPaused {
+                        Image(systemName: Icon.paused)
+                            .font(.system(size: Metrics.StatusItem.pausedIconSize, weight: .bold))
+                    }
+                    RollingText(text: title, font: TypographyToken.menuBarTitle.font)
+                }
             }
         }
         .foregroundStyle(.primary)

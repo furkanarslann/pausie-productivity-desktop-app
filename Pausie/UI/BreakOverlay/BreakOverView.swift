@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Screen 07: the break is over, the chime plays for at most 1 min, and the screen waits for the user.
+/// Screen 07: the break is over, the sound plays for at most 1 min, and the screen waits for the user.
+/// The sound chip names the sound and opens Settings to change it.
 struct BreakOverView: View {
     let session: SessionController
     let settings: SettingsStore
+    let onChangeSound: () -> Void
 
     var body: some View {
         VStack(spacing: Metrics.BreakCard.spacing) {
@@ -12,12 +14,12 @@ struct BreakOverView: View {
                 .typography(.title)
                 .foregroundStyle(Color(.textPrimary))
                 .multilineTextAlignment(.center)
-            Text(L10n.t(.breakOverBody))
+            Text(L10n.t(session.hasNoteThisCycle ? .breakOverBody : .breakOverBodyNoNote))
                 .typography(.body)
                 .foregroundStyle(Color(.textSecondary))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            chimeChip
+            soundChip
             Spacer().frame(height: Metrics.BreakCard.buttonTopSpacer)
             Button(L10n.t(.breakActionLetsGo)) {
                 session.send(.letsGo)
@@ -34,16 +36,26 @@ struct BreakOverView: View {
         .pausieSurface(radius: Radius.lg)
     }
 
-    private var chimeChip: some View {
-        HStack(spacing: Metrics.BreakCard.chipSpacing) {
-            Image(systemName: Icon.chime)
-                .font(TypographyToken.bodyEmphasis.font)
-                .accessibilityHidden(true)
-            Text(L10n.t(.breakOverChime))
-                .typography(.caption)
+    private var soundChip: some View {
+        let name = L10n.t(settings.settings.breakSound.nameKey)
+        return Button(action: onChangeSound) {
+            HStack(spacing: Metrics.BreakCard.chipSpacing) {
+                Image(systemName: Icon.chime)
+                    .font(TypographyToken.bodyEmphasis.font)
+                    .accessibilityHidden(true)
+                Text(L10n.t(.breakOverSound, ["sound": name]))
+                    .typography(.caption)
+                Image(systemName: Icon.disclosure)
+                    .font(.system(size: Metrics.BreakCard.chipDisclosureSize, weight: .semibold))
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(Color(.brandPrimary))
+            .padding(Metrics.BreakCard.chipPadding)
+            .background(Capsule().fill(Color(.brandLavenderTint)))
+            .contentShape(Capsule())
         }
-        .foregroundStyle(Color(.brandPrimary))
-        .padding(Metrics.BreakCard.chipPadding)
-        .background(Capsule().fill(Color(.brandLavenderTint)))
+        .buttonStyle(.plain)
+        .help(L10n.t(.breakOverSoundHelp))
+        .accessibilityHint(L10n.t(.breakOverSoundHelp))
     }
 }

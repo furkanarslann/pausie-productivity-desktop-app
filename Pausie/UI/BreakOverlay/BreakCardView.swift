@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Screen 04 (`.noteRequired`) and screen 05 (`.running`).
+/// Screen 04 (`.noteRequired`, with "Skip note & start break", T21) and screen 05 (`.running`).
 struct BreakCardView: View {
     enum Mode {
         case noteRequired
@@ -32,11 +32,17 @@ struct BreakCardView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             TodoEditor(markdown: $session.draft, placeholder: L10n.t(.breakNoteRequiredPlaceholder))
-            Button(L10n.t(.breakNoteRequiredAction)) {
-                session.send(.saveRequiredNote(markdown: session.draft))
+            VStack(spacing: Metrics.BreakCard.requiredActionSpacing) {
+                Button(L10n.t(.breakNoteRequiredAction)) {
+                    session.send(.saveRequiredNote(markdown: session.draft))
+                }
+                .buttonStyle(.pausie(.primary, fullWidth: true))
+                .keyboardShortcut(.return, modifiers: .command)
+                Button(L10n.t(.breakNoteRequiredSkip)) {
+                    session.skipNote()
+                }
+                .buttonStyle(.pausieGhost)
             }
-            .buttonStyle(.pausie(.primary, fullWidth: true))
-            .keyboardShortcut(.return, modifiers: .command)
         }
         .padding(Metrics.BreakCard.padding)
         .frame(width: Metrics.BreakCard.requiredWidth)
@@ -48,7 +54,7 @@ struct BreakCardView: View {
     private var running: some View {
         VStack(spacing: Metrics.BreakCard.spacing) {
             BreakRing(progress: session.breakProgress)
-            PausieBubble(text: L10n.t(.breakBubble))
+            PausieBubble(text: L10n.t(session.hasNoteThisCycle ? .breakBubble : .breakBubbleNoNote))
             Text(TimeFormat.countdown(session.breakRemaining ?? 0))
                 .typography(.timer)
                 .foregroundStyle(Color(.textPrimary))

@@ -23,6 +23,10 @@ enum SessionEffect: Equatable, Sendable {
     /// Set the break deadline.
     case startBreakTimer
     case stopTimers
+    /// The menu's Pause (T16): freeze the work timer until Resume.
+    case pauseWorkTimer
+    /// The menu's Resume (T17).
+    case resumeWorkTimer
     case openNoteWindow(NoteWindowMode)
     case closeNoteWindow
     /// Pick the next "Ask me later" reminder (3 or 1 min left) after the time left now.

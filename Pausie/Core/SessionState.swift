@@ -1,6 +1,6 @@
 import Foundation
 
-/// The seven states of the spec's state machine.
+/// The states of the spec's state machine, plus `preBreakSnoozed` (T14) and `preBreakSkipped` (T18).
 enum SessionState: Equatable, Sendable {
     /// App open, no timer running.
     case idle
@@ -12,6 +12,8 @@ enum SessionState: Equatable, Sendable {
     case preBreakSnoozed
     /// Note saved in the last 5 min; work goes on until the break starts on time.
     case preBreakNoted
+    /// "Skip note for this session": no note this cycle; work goes on until the break starts on time.
+    case preBreakSkipped
     /// Work time ended without a note; break timer not started.
     case breakNoteRequired
     /// Break timer running.
@@ -22,7 +24,7 @@ enum SessionState: Equatable, Sendable {
     /// States in which the work timer counts down.
     var isWorkPhase: Bool {
         switch self {
-        case .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted: true
+        case .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped: true
         default: false
         }
     }
@@ -54,4 +56,8 @@ enum SessionRules {
     static let resumePanelAutoCloseDelay: TimeInterval = 15
     /// How long "Copied!" stays visible in the resume panel.
     static let copiedFeedbackDuration: TimeInterval = 1.5
+    /// A sound picked in Settings plays for at most this long (chimes are shorter and play once).
+    static let soundPreviewDuration: TimeInterval = 15
+    /// Music fades out over this long when its preview ends.
+    static let soundPreviewFadeOut: TimeInterval = 1
 }

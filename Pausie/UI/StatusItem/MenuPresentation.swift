@@ -4,6 +4,8 @@ import Foundation
 struct MenuPresentation: Equatable {
     enum Row: Equatable {
         case start
+        case pause
+        case resume
         case stop
         case writeNote
         case takeBreakNow
@@ -25,6 +27,8 @@ struct MenuPresentation: Equatable {
 
     /// Menu bar title next to the icon. `nil` = icon only.
     let title: String?
+    /// Paused from the menu (T16): the menu bar shows a pause sign before the countdown.
+    let isPaused: Bool
     let header: Header
     let rows: [Row]
 
@@ -35,12 +39,15 @@ struct MenuPresentation: Equatable {
         var workProgress: Double?
         var breakRemaining: TimeInterval?
         var breakEndsAt: Date?
+        /// Paused from the menu; only meaningful in work states.
+        var isPaused = false
     }
 
     init(_ snapshot: Snapshot) {
         title = Self.makeTitle(snapshot)
+        isPaused = snapshot.isPaused && snapshot.state.isWorkPhase
         header = Self.makeHeader(snapshot)
-        rows = Self.makeRows(for: snapshot.state)
+        rows = Self.makeRows(for: snapshot.state, isPaused: isPaused)
     }
 
     @MainActor
@@ -51,8 +58,15 @@ struct MenuPresentation: Equatable {
             workEndsAt: session.workEndsAt,
             workProgress: session.workProgress,
             breakRemaining: session.breakRemaining,
-            breakEndsAt: session.breakEndsAt
+            breakEndsAt: session.breakEndsAt,
+            isPaused: session.isPausedByUser
         ))
+    }
+
+    /// What VoiceOver reads for the status item.
+    var accessibilityValue: String? {
+        guard isPaused, let title else { return title }
+        return L10n.t(.menubarAccessibilityPaused, ["remaining": title])
     }
 
     // MARK: - Title
@@ -62,7 +76,7 @@ struct MenuPresentation: Equatable {
         switch snapshot.state {
         case .idle:
             nil
-        case .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted:
+        case .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped:
             snapshot.workRemaining.map(TimeFormat.countdown)
         case .breakNoteRequired:
             L10n.t(.menubarTitleBreak)
@@ -78,6 +92,15 @@ struct MenuPresentation: Equatable {
     static func makeHeader(_ snapshot: Snapshot) -> Header {
         let remaining = TimeFormat.countdown(snapshot.workRemaining ?? 0)
         let workEnd = snapshot.workEndsAt.map(TimeFormat.clockTime) ?? ""
+        // Paused from the menu: the break time isn't known until Resume, so only the time left is shown.
+        if snapshot.isPaused, snapshot.state.isWorkPhase {
+            return Header(
+                pose: .sleepy,
+                title: L10n.t(.menuHeaderPausedTitle),
+                subtitle: L10n.t(.menuHeaderPausedSubtitle, ["remaining": remaining]),
+                progress: snapshot.workProgress ?? 0
+            )
+        }
         switch snapshot.state {
         case .idle:
             return Header(
@@ -98,6 +121,13 @@ struct MenuPresentation: Equatable {
                 pose: .takingNotes,
                 title: L10n.t(.menuHeaderNotedTitle),
                 subtitle: L10n.t(.menuHeaderNotedSubtitle, ["remaining": remaining]),
+                progress: snapshot.workProgress ?? 0
+            )
+        case .preBreakSkipped:
+            return Header(
+                pose: .focused,
+                title: L10n.t(.menuHeaderSkippedTitle),
+                subtitle: L10n.t(.menuHeaderSkippedSubtitle, ["remaining": remaining]),
                 progress: snapshot.workProgress ?? 0
             )
         case .breakNoteRequired:
@@ -129,17 +159,22 @@ struct MenuPresentation: Equatable {
 
     // MARK: - Rows (screen 01)
 
-    static func makeRows(for state: SessionState) -> [Row] {
+    /// In work states Pause (or Resume) is the first row, where idle has "Start focus session".
+    static func makeRows(for state: SessionState, isPaused: Bool = false) -> [Row] {
         let common: [Row] = [.recentNotes, .settings]
+        let pauseRow: Row = isPaused ? .resume : .pause
+        let workTail: [Row] = [.separator] + common + [.separator, .stop, .separator, .quit]
         switch state {
         case .idle:
             return [.separator, .start, .separator] + common + [.separator, .quit]
         case .working, .preBreakPending:
-            return [.separator] + common + [.separator, .stop, .separator, .quit]
+            return [.separator, pauseRow] + workTail
         case .preBreakSnoozed:
-            return [.separator, .writeNote, .separator] + common + [.separator, .stop, .separator, .quit]
+            return [.separator, pauseRow, .writeNote] + workTail
         case .preBreakNoted:
-            return [.separator, .takeBreakNow, .editNote, .separator] + common + [.separator, .stop, .separator, .quit]
+            return [.separator, pauseRow, .takeBreakNow, .editNote] + workTail
+        case .preBreakSkipped:
+            return [.separator, pauseRow, .takeBreakNow, .writeNote] + workTail
         case .onBreak:
             return [.separator, .skipBreak, .separator] + common + [.separator, .quit]
         case .breakNoteRequired, .breakOver:

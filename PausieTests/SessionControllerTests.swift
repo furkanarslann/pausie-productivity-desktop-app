@@ -365,7 +365,7 @@ struct SessionControllerTests {
         #expect(h.controller.workRemaining == TimeInterval(25 * 60))
     }
 
-    // MARK: - Sleep and lock (rule 5)
+    // MARK: - Sleep and lock (rule 8)
 
     @Test("Screen lock pauses the work timer and resumes where it left off")
     func lockPausesWork() {
@@ -422,6 +422,161 @@ struct SessionControllerTests {
         h.controller.systemResumed(.sleep)
         #expect(h.controller.state == .preBreakPending)
         #expect(h.controller.workRemaining == TimeInterval(3 * 60))
+    }
+
+    // MARK: - Pause from the menu (T16, T17)
+
+    @Test("T16 + T17: Pause freezes the work timer, Resume continues from where it stopped")
+    func pauseAndResume() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 10)
+        h.controller.pause()
+        #expect(h.controller.isPausedByUser)
+        h.advance(minutes: 60)
+        #expect(h.controller.state == .working)
+        #expect(h.controller.workRemaining == TimeInterval(40 * 60))
+
+        h.controller.resume()
+        #expect(!h.controller.isPausedByUser)
+        h.advance(minutes: 5)
+        #expect(h.controller.workRemaining == TimeInterval(35 * 60))
+    }
+
+    @Test("Paused in the last minutes: no reminder and no break until Resume")
+    func pauseHoldsTheBreak() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.askLater()
+        h.controller.pause()
+        h.advance(minutes: 30)
+        #expect(h.controller.state == .preBreakSnoozed)
+        #expect(h.controller.breakDeadline == nil)
+
+        h.controller.resume()
+        h.advance(minutes: 2) // 3:00 left: the reminder comes back
+        #expect(h.controller.state == .preBreakPending)
+    }
+
+    @Test("Pause and lock overlap: the timer runs only after both end")
+    func pauseAndLock() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.controller.pause()
+        h.controller.systemPaused(.screenLocked)
+        h.controller.systemResumed(.screenLocked)
+        h.advance(minutes: 5)
+        #expect(h.controller.workRemaining == TimeInterval(50 * 60))
+        #expect(h.controller.isPausedByUser)
+        h.controller.resume()
+        h.advance(minutes: 5)
+        #expect(h.controller.workRemaining == TimeInterval(45 * 60))
+    }
+
+    @Test("A pause ends with its work block: a break taken from the menu, or Stop")
+    func pauseClearedAtBreakAndStop() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.send(.saveNote(markdown: "- [ ] x"))
+        h.controller.pause()
+        h.controller.takeBreakNow()
+        #expect(h.controller.state == .onBreak)
+        #expect(!h.controller.isPausedByUser)
+        h.controller.requestSkipBreak()
+        h.controller.confirmSkipBreak()
+        #expect(h.controller.state == .working)
+        h.advance(minutes: 5)
+        #expect(h.controller.workRemaining == TimeInterval(45 * 60))
+
+        h.controller.pause()
+        h.controller.send(.stop)
+        #expect(!h.controller.isPausedByUser)
+        h.controller.send(.start)
+        h.advance(minutes: 5)
+        #expect(h.controller.workRemaining == TimeInterval(45 * 60))
+    }
+
+    // MARK: - Skipping the note (T18-T21)
+
+    @Test("T18 + T19: Skip keeps working; the break starts on time and nothing is saved or shown after")
+    func skipNoteThenBreak() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.presenter.reset()
+
+        h.controller.skipNote()
+        #expect(h.controller.state == .preBreakSkipped)
+        #expect(h.presenter.calls == [.closeNoteWindow])
+
+        h.advance(minutes: 3) // no reminders after skipping
+        #expect(h.controller.state == .preBreakSkipped)
+        h.advance(minutes: 2)
+        #expect(h.controller.state == .onBreak)
+        #expect(h.controller.breakDeadline != nil)
+        #expect(h.noteStore.notes.isEmpty)
+        #expect(!h.controller.hasNoteThisCycle) // the break cards don't promise a note
+
+        h.advance(minutes: 10)
+        h.presenter.reset()
+        h.controller.send(.letsGo)
+        #expect(h.controller.state == .working)
+        #expect(h.presenter.calls == [.hideBreakOverlay]) // no Welcome back without a note
+    }
+
+    @Test("A skipped cycle doesn't show the previous cycle's note after the break")
+    func skippedCycleShowsNoOldNote() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.saveNoteAndTakeBreak("- [ ] earlier note")
+        h.advance(minutes: 10)
+        h.controller.send(.letsGo)
+
+        h.advance(minutes: 45)
+        h.controller.skipNote()
+        h.controller.takeBreakNow()
+        #expect(h.controller.state == .onBreak)
+        h.controller.requestSkipBreak()
+        h.presenter.reset()
+        h.controller.confirmSkipBreak()
+        #expect(h.presenter.calls == [.hideBreakOverlay])
+        #expect(h.noteStore.notes.count == 1)
+    }
+
+    @Test("T20: Write note now after skipping brings back what was typed")
+    func writeNoteAfterSkipping() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.draft = "- [ ] half a thought"
+        h.controller.skipNote()
+        h.presenter.reset()
+
+        h.controller.writeNoteNow()
+        #expect(h.controller.state == .preBreakPending)
+        #expect(h.presenter.calls == [.openNoteWindow(.pending)])
+        #expect(h.controller.draft == "- [ ] half a thought")
+        h.controller.send(.saveNote(markdown: h.controller.draft))
+        #expect(h.controller.state == .preBreakNoted)
+        #expect(h.noteStore.notes.count == 1)
+    }
+
+    @Test("T21: Skip on the break note card starts the break without a note")
+    func skipOnBreakNoteCard() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 50)
+        #expect(h.controller.state == .breakNoteRequired)
+        h.presenter.reset()
+
+        h.controller.skipNote()
+        #expect(h.controller.state == .onBreak)
+        #expect(h.presenter.calls == [.showBreakOverlay(.running)])
+        #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
+        #expect(h.noteStore.notes.isEmpty)
     }
 
     // MARK: - Derived values

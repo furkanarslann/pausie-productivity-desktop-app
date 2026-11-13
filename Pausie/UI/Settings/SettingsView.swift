@@ -1,15 +1,18 @@
 import SwiftUI
 
-/// Screen 09. Durations apply on Save (from the next cycle, rule 11); appearance applies right away.
+/// Screen 09. Durations apply on Save (from the next cycle, rule 9); the break sound and appearance
+/// apply right away. Picking a sound plays a preview.
 struct SettingsView: View {
     let store: SettingsStore
+    let player: ChimePlayer
     let onClose: () -> Void
 
     @State private var workMinutes: Int
     @State private var breakMinutes: Int
 
-    init(store: SettingsStore, onClose: @escaping () -> Void) {
+    init(store: SettingsStore, player: ChimePlayer, onClose: @escaping () -> Void) {
         self.store = store
+        self.player = player
         self.onClose = onClose
         _workMinutes = State(initialValue: store.settings.workMinutes)
         _breakMinutes = State(initialValue: store.settings.breakMinutes)
@@ -38,6 +41,15 @@ struct SettingsView: View {
                 )
             }
             VStack(alignment: .leading, spacing: Metrics.Settings.groupSpacing) {
+                row(L10n.t(.settingsSoundLabel)) {
+                    HStack(spacing: Metrics.Settings.soundControlSpacing) {
+                        soundPicker
+                        previewButton
+                    }
+                }
+                helpText(L10n.t(.settingsSoundHelp))
+            }
+            VStack(alignment: .leading, spacing: Metrics.Settings.groupSpacing) {
                 row(L10n.t(.settingsAppearanceLabel)) {
                     SegmentedPicker(selection: appearance, options: [
                         (AppearancePreference.system, L10n.t(.settingsAppearanceSystem)),
@@ -59,11 +71,60 @@ struct SettingsView: View {
         .padding(Metrics.Settings.contentPadding)
         .frame(width: Metrics.Settings.width)
         .background(Color(.surfaceWindow))
+        .onDisappear { player.stopPreview() }
     }
 
     /// Appearance is bound straight to the store so it applies immediately.
     private var appearance: Binding<AppearancePreference> {
         Binding(get: { store.settings.appearance }, set: { store.setAppearance($0) })
+    }
+
+    /// The break sound is saved as soon as it's picked, and plays once so the user hears it.
+    private var breakSound: Binding<BreakSound> {
+        Binding(get: { store.settings.breakSound }, set: { sound in
+            store.setBreakSound(sound)
+            player.preview(sound)
+        })
+    }
+
+    private var soundPicker: some View {
+        Picker(L10n.t(.settingsSoundLabel), selection: breakSound) {
+            Section(L10n.t(.settingsSoundMusic)) {
+                ForEach(BreakSound.music, id: \.self) { sound in
+                    Text(L10n.t(sound.nameKey)).tag(sound)
+                }
+            }
+            Section(L10n.t(.settingsSoundChimes)) {
+                ForEach(BreakSound.chimes, id: \.self) { sound in
+                    Text(L10n.t(sound.nameKey)).tag(sound)
+                }
+            }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .fixedSize()
+    }
+
+    private var previewButton: some View {
+        let isPreviewing = player.previewing != nil
+        let label = L10n.t(isPreviewing ? .settingsSoundStopPreview : .settingsSoundPreview)
+        return Button {
+            if isPreviewing {
+                player.stopPreview()
+            } else {
+                player.preview(store.settings.breakSound)
+            }
+        } label: {
+            Image(systemName: isPreviewing ? Icon.previewStop : Icon.previewPlay)
+                .font(.system(size: Metrics.Stepper.iconSize, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(.brandPrimary))
+                .frame(width: Metrics.Stepper.buttonSize, height: Metrics.Stepper.height)
+                .background(RoundedRectangle(cornerRadius: Radius.sm).fill(Color(.brandLavenderTint)))
+                .contentShape(RoundedRectangle(cornerRadius: Radius.sm))
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
     }
 
     private var header: some View {

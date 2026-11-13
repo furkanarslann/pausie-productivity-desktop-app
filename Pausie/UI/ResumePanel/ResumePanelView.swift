@@ -1,10 +1,41 @@
 import AppKit
 import SwiftUI
 
+/// Where the panel was opened from. The header follows it: "Welcome back!" only fits the return from a
+/// break.
+enum ResumePanelOrigin: Equatable, Sendable {
+    /// "Let's go!" or a skipped break (T11, T12).
+    case breakEnded
+    /// A note picked from Recent notes in the menu.
+    case recentNotes
+
+    var pose: PausiePose {
+        switch self {
+        case .breakEnded: .happy
+        case .recentNotes: .thinking
+        }
+    }
+
+    var titleKey: L10nKey {
+        switch self {
+        case .breakEnded: .resumeTitle
+        case .recentNotes: .resumeRecentTitle
+        }
+    }
+
+    var subtitleKey: L10nKey {
+        switch self {
+        case .breakEnded: .resumeSubtitle
+        case .recentNotes: .resumeRecentSubtitle
+        }
+    }
+}
+
 /// Screen 08: the saved note as a read-only todo list, with a copy button that puts the raw markdown
 /// on the pasteboard and shows "Copied!" for 1.5 s.
 struct ResumePanelView: View {
     let note: Note
+    let origin: ResumePanelOrigin
     let onClose: () -> Void
     /// Pointer entered (`true`) or left the panel; pauses the auto-close countdown.
     var onHoverChange: (Bool) -> Void = { _ in }
@@ -27,12 +58,12 @@ struct ResumePanelView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: Metrics.ResumePanel.headerSpacing) {
-            PausiePoseView(pose: .happy, size: Metrics.ResumePanel.poseSize)
+            PausiePoseView(pose: origin.pose, size: Metrics.ResumePanel.poseSize)
             VStack(alignment: .leading, spacing: Metrics.ResumePanel.headerTextSpacing) {
-                Text(L10n.t(.resumeTitle))
+                Text(L10n.t(origin.titleKey))
                     .typography(.headline)
                     .foregroundStyle(Color(.textPrimary))
-                Text(L10n.t(.resumeSubtitle))
+                Text(L10n.t(origin.subtitleKey))
                     .typography(.caption)
                     .foregroundStyle(Color(.textSecondary))
             }

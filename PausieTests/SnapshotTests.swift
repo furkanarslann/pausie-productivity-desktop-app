@@ -56,6 +56,10 @@ struct SnapshotTests {
             h.advance(minutes: 45)
             h.controller.send(.saveNote(markdown: "- [ ] Finish validation"))
             h.advance(minutes: 1.8)
+        case .preBreakSkipped:
+            h.advance(minutes: 45)
+            h.controller.skipNote()
+            h.advance(minutes: 1.8)
         case .breakNoteRequired:
             h.advance(minutes: 50)
             h.controller.draft = "- [ ] Continue the settings screen layout\n- [ ] "
@@ -72,11 +76,15 @@ struct SnapshotTests {
     }
 
     @Test func menuHeaders() throws {
-        for state in [SessionState.idle, .working, .preBreakSnoozed, .preBreakNoted, .onBreak, .breakNoteRequired, .breakOver] {
+        for state in [SessionState.idle, .working, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped, .onBreak, .breakNoteRequired, .breakOver] {
             let h = harness(at: state)
             try render("01-menu-header-\(state)", MenuHeaderContent(header: MenuPresentation(session: h.controller).header)
                 .background(Color(.surfaceWindow)))
         }
+        let paused = harness(at: .working)
+        paused.controller.pause()
+        try render("01-menu-header-paused", MenuHeaderContent(header: MenuPresentation(session: paused.controller).header)
+            .background(Color(.surfaceWindow)))
     }
 
     @Test func statusItemLabel() throws {
@@ -84,6 +92,10 @@ struct SnapshotTests {
         try render("00-status-item-working", StatusItemLabel(session: harness(at: .working).controller, icon: icon)
             .frame(height: 24))
         try render("00-status-item-note-required", StatusItemLabel(session: harness(at: .breakNoteRequired).controller, icon: icon)
+            .frame(height: 24))
+        let paused = harness(at: .working)
+        paused.controller.pause()
+        try render("00-status-item-paused", StatusItemLabel(session: paused.controller, icon: icon)
             .frame(height: 24))
     }
 
@@ -99,7 +111,7 @@ struct SnapshotTests {
         let h = harness(at: .onBreak)
         try render("06-skip-confirm", SkipConfirmView(session: h.controller))
         let settings = SettingsStore(defaults: UserDefaults(suiteName: "PausieSnapshots-\(UUID().uuidString)")!)
-        try render("07-break-over", BreakOverView(session: harness(at: .breakOver).controller, settings: settings))
+        try render("07-break-over", BreakOverView(session: harness(at: .breakOver).controller, settings: settings) {})
     }
 
     @Test func resumePanel() throws {
@@ -109,14 +121,15 @@ struct SnapshotTests {
             createdAt: Date(),
             updatedAt: Date()
         )
-        try render("08-resume-panel", ResumePanelView(note: note) {})
+        try render("08-resume-panel", ResumePanelView(note: note, origin: .breakEnded) {})
+        try render("08-resume-panel-recent", ResumePanelView(note: note, origin: .recentNotes) {})
         let empty = Note(id: UUID(), markdown: "", createdAt: Date(), updatedAt: Date())
-        try render("08-resume-panel-empty", ResumePanelView(note: empty) {})
+        try render("08-resume-panel-empty", ResumePanelView(note: empty, origin: .breakEnded) {})
     }
 
     @Test func settings() throws {
         let store = SettingsStore(defaults: UserDefaults(suiteName: "PausieSnapshots-\(UUID().uuidString)")!)
-        try render("09-settings", SettingsView(store: store) {})
+        try render("09-settings", SettingsView(store: store, player: ChimePlayer()) {})
     }
 
     @Test func components() throws {

@@ -36,14 +36,17 @@ struct MenuPresentationTests {
             .separator, .start, .separator, .recentNotes, .settings, .separator, .quit,
         ])
         #expect(MenuPresentation.makeRows(for: .working) == [
-            .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
+            .separator, .pause, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
         ])
         #expect(MenuPresentation.makeRows(for: .preBreakSnoozed) == [
-            .separator, .writeNote, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
+            .separator, .pause, .writeNote, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
         ])
         #expect(MenuPresentation.makeRows(for: .preBreakPending) == MenuPresentation.makeRows(for: .working))
         #expect(MenuPresentation.makeRows(for: .preBreakNoted) == [
-            .separator, .takeBreakNow, .editNote, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
+            .separator, .pause, .takeBreakNow, .editNote, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
+        ])
+        #expect(MenuPresentation.makeRows(for: .preBreakSkipped) == [
+            .separator, .pause, .takeBreakNow, .writeNote, .separator, .recentNotes, .settings, .separator, .stop, .separator, .quit,
         ])
         #expect(MenuPresentation.makeRows(for: .onBreak) == [
             .separator, .skipBreak, .separator, .recentNotes, .settings, .separator, .quit,
@@ -54,6 +57,53 @@ struct MenuPresentationTests {
             #expect(!rows.contains(.skipBreak))
             #expect(rows.contains(.quit))
         }
+    }
+
+    @Test("Paused: Resume takes Pause's place; breaks and idle never offer either")
+    func pauseRows() {
+        for state in [SessionState.working, .preBreakPending, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped] {
+            let rows = MenuPresentation.makeRows(for: state, isPaused: true)
+            #expect(rows[1] == .resume)
+            #expect(!rows.contains(.pause))
+        }
+        for state in [SessionState.idle, .breakNoteRequired, .onBreak, .breakOver] {
+            let presentation = MenuPresentation(Snapshot(state: state, isPaused: true))
+            #expect(!presentation.isPaused)
+            #expect(!presentation.rows.contains(.pause))
+            #expect(!presentation.rows.contains(.resume))
+        }
+    }
+
+    @Test("Paused header: time left without a break time; the menu bar keeps the countdown")
+    func pausedHeader() {
+        let presentation = MenuPresentation(Snapshot(state: .working, workRemaining: 42 * 60 + 18, workEndsAt: now, workProgress: 0.15, isPaused: true))
+        #expect(presentation.header.pose == .sleepy)
+        #expect(presentation.header.title == "Paused")
+        #expect(presentation.header.subtitle == "42:18 left · resume when ready")
+        #expect(presentation.header.progress == 0.15)
+        #expect(presentation.title == "42:18")
+        #expect(presentation.isPaused)
+        #expect(presentation.accessibilityValue == "Paused, 42:18 left")
+        #expect(MenuPresentation(Snapshot(state: .working, workRemaining: 60)).accessibilityValue == "01:00")
+    }
+
+    @Test("Skipped note header")
+    func skippedHeader() {
+        let skipped = MenuPresentation(Snapshot(state: .preBreakSkipped, workRemaining: 192, workProgress: 0.9))
+        #expect(skipped.header.title == "No note this time")
+        #expect(skipped.header.subtitle == "Break in 03:12")
+        #expect(skipped.header.progress == 0.9)
+        #expect(skipped.title == "03:12")
+    }
+
+    @Test("The note panel says Welcome back only after a break; from Recent notes it says so")
+    func resumePanelHeaderFollowsOrigin() {
+        #expect(L10n.t(ResumePanelOrigin.breakEnded.titleKey) == "Welcome back!")
+        #expect(L10n.t(ResumePanelOrigin.breakEnded.subtitleKey) == "Here is where you left off.")
+        #expect(ResumePanelOrigin.breakEnded.pose == .happy)
+        #expect(L10n.t(ResumePanelOrigin.recentNotes.titleKey) == "Recent note")
+        #expect(L10n.t(ResumePanelOrigin.recentNotes.subtitleKey) == "Picked from your last 5 notes.")
+        #expect(ResumePanelOrigin.recentNotes.pose == .thinking)
     }
 
     @Test("Stop is never offered during a break")

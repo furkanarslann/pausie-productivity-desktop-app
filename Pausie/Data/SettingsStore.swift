@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Persists `Settings` in `UserDefaults`. Durations are read by `SessionController` at the start of
-/// each cycle (spec rule 11); appearance is applied by the app as soon as it changes.
+/// each cycle (spec rule 11); appearance and the break sound apply as soon as they change.
 @MainActor
 @Observable
 final class SettingsStore {
@@ -38,6 +38,13 @@ final class SettingsStore {
         settings.appearance = appearance
         persist()
         onAppearanceChange?(appearance)
+    }
+
+    /// The break sound applies right away, independent of the Save button.
+    func setBreakSound(_ sound: BreakSound) {
+        guard sound != settings.breakSound else { return }
+        settings.breakSound = sound
+        persist()
     }
 
     private func persist() {

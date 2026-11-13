@@ -112,7 +112,7 @@ struct SessionMachineTests {
     }
 
     @Test("T13 stop from work states --> idle", arguments: [
-        SessionState.working, .preBreakPending, .preBreakSnoozed, .preBreakNoted,
+        SessionState.working, .preBreakPending, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped,
     ])
     func t13(from state: SessionState) {
         #expect(reduce(state, .stop) == SessionTransition(state: .idle, effects: [.stopTimers, .closeNoteWindow]))
@@ -129,6 +129,57 @@ struct SessionMachineTests {
     @Test("T15 preBreakSnoozed --noteReminder--> preBreakPending")
     func t15() {
         #expect(reduce(.preBreakSnoozed, .noteReminder) == SessionTransition(state: .preBreakPending, effects: [.openNoteWindow(.pending)]))
+    }
+
+    @Test("T16 pause and T17 resume keep the work state", arguments: [
+        SessionState.working, .preBreakPending, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped,
+    ])
+    func t16t17(from state: SessionState) {
+        #expect(reduce(state, .pause) == SessionTransition(state: state, effects: [.pauseWorkTimer]))
+        #expect(reduce(state, .resume) == SessionTransition(state: state, effects: [.resumeWorkTimer]))
+    }
+
+    @Test("Pause and resume are ignored outside work", arguments: [
+        SessionState.idle, .breakNoteRequired, .onBreak, .breakOver,
+    ])
+    func pauseOnlyWhileWorking(in state: SessionState) {
+        #expect(reduce(state, .pause) == nil)
+        #expect(reduce(state, .resume) == nil)
+    }
+
+    @Test("T18 preBreakPending --skipNote--> preBreakSkipped: keep working, nothing saved")
+    func t18() {
+        #expect(reduce(.preBreakPending, .skipNote) == SessionTransition(state: .preBreakSkipped, effects: [.closeNoteWindow]))
+    }
+
+    @Test("T19 preBreakSkipped --workTimeUp / takeBreakNow--> onBreak without saving", arguments: [
+        SessionEvent.workTimeUp(draft: "- [ ] typed before skipping"), .takeBreakNow(draft: "- [ ] typed before skipping"),
+    ])
+    func t19(event: SessionEvent) {
+        #expect(reduce(.preBreakSkipped, event) == SessionTransition(
+            state: .onBreak,
+            effects: [.showBreakOverlay(.running), .startBreakTimer]
+        ))
+    }
+
+    @Test("T20 preBreakSkipped --noteReminder (Write note now)--> preBreakPending")
+    func t20() {
+        #expect(reduce(.preBreakSkipped, .noteReminder) == SessionTransition(state: .preBreakPending, effects: [.openNoteWindow(.pending)]))
+    }
+
+    @Test("T21 breakNoteRequired --skipNote--> onBreak without saving")
+    func t21() {
+        #expect(reduce(.breakNoteRequired, .skipNote) == SessionTransition(
+            state: .onBreak,
+            effects: [.showBreakOverlay(.running), .startBreakTimer]
+        ))
+    }
+
+    @Test("Skipping the note is only offered where the note is asked for", arguments: [
+        SessionState.idle, .working, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped, .onBreak, .breakOver,
+    ])
+    func skipNoteOnlyWhenAsked(in state: SessionState) {
+        #expect(reduce(state, .skipNote) == nil)
     }
 
     // MARK: - Rules
@@ -153,7 +204,7 @@ struct SessionMachineTests {
         }
     }
 
-    @Test("Rules 1 and 4: every path into a break saves a note, then starts the break timer")
+    @Test("Rules 1 and 4: every path into a break saves a note (unless skipped), then starts the break timer")
     func everyBreakPathSavesANote() {
         let pathsIntoBreak: [(SessionState, SessionEvent)] = [
             (.preBreakPending, .workTimeUp(draft: "- [ ] x")),
@@ -166,6 +217,18 @@ struct SessionMachineTests {
             let transition = reduce(state, event)
             #expect(transition?.state == .onBreak)
             #expect(transition?.effects.first { if case .persistNote = $0 { true } else { false } } != nil)
+            #expect(transition?.effects.last == .startBreakTimer)
+        }
+
+        let skippedPaths: [(SessionState, SessionEvent)] = [
+            (.preBreakSkipped, .workTimeUp(draft: "- [ ] x")),
+            (.preBreakSkipped, .takeBreakNow(draft: "- [ ] x")),
+            (.breakNoteRequired, .skipNote),
+        ]
+        for (state, event) in skippedPaths {
+            let transition = reduce(state, event)
+            #expect(transition?.state == .onBreak)
+            #expect(transition?.effects.contains { if case .persistNote = $0 { true } else { false } } == false)
             #expect(transition?.effects.last == .startBreakTimer)
         }
     }
@@ -187,5 +250,9 @@ struct SessionMachineTests {
         #expect(reduce(.preBreakNoted, .noteReminder) == nil)
         #expect(reduce(.onBreak, .saveRequiredNote(markdown: "")) == nil)
         #expect(reduce(.breakOver, .breakTimeUp) == nil)
+        #expect(reduce(.preBreakSkipped, .askLater) == nil)
+        #expect(reduce(.preBreakSkipped, .saveNote(markdown: "")) == nil)
+        #expect(reduce(.preBreakSkipped, .editNote) == nil)
+        #expect(reduce(.preBreakSkipped, .warningReached) == nil)
     }
 }

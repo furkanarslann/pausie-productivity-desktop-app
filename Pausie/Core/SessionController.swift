@@ -19,10 +19,12 @@ protocol ChimePlaying: AnyObject {
     func stop()
 }
 
-/// Why the work timer is paused (spec rule 5).
+/// Why the work timer is paused: sleep and screen lock (rule 8) or the menu's Pause (T16).
+/// The timer runs again only when every reason is gone.
 enum PauseReason: Hashable, Sendable {
     case sleep
     case screenLocked
+    case user
 }
 
 /// Owns the timers, asks `SessionMachine` what to do and applies the returned effects.
@@ -38,6 +40,8 @@ final class SessionController {
     var draft: String = TodoMarkdown.template
     /// The note saved in this cycle, if any. Saving again updates the same record.
     private(set) var currentNote: Note?
+    /// False during a break whose note was skipped (T19, T21): the break cards don't mention a note.
+    var hasNoteThisCycle: Bool { currentNote != nil }
     /// Settings copied at the start of the cycle; changes made mid-cycle apply from the next one (rule 11).
     private(set) var cycleSettings: Settings
     /// "Skip break…" confirmation shown on top of the break card.
@@ -78,6 +82,9 @@ final class SessionController {
     // MARK: - Derived values
 
     var isWorkPaused: Bool { !pauseReasons.isEmpty && state.isWorkPhase }
+
+    /// Paused from the menu (T16): the menu offers Resume and the menu bar shows a pause sign.
+    var isPausedByUser: Bool { pauseReasons.contains(.user) && state.isWorkPhase }
 
     /// Remaining work time while a work-phase state is active.
     var workRemaining: TimeInterval? {
@@ -152,7 +159,7 @@ final class SessionController {
            let remaining = workRemaining, remaining <= reminder {
             send(.noteReminder)
         }
-        if state == .preBreakPending || state == .preBreakSnoozed || state == .preBreakNoted,
+        if state.isWorkPhase, state != .working,
            !isWorkPaused, let remaining = workRemaining, remaining <= 0 {
             send(.workTimeUp(draft: draft))
         }
@@ -161,19 +168,35 @@ final class SessionController {
         }
     }
 
+    // MARK: - Pause (T16, T17)
+
+    func pause() {
+        send(.pause)
+    }
+
+    func resume() {
+        send(.resume)
+    }
+
     // MARK: - Note window
+
+    /// "Skip note for this session" in the note window (T18) or "Skip note & start break" on the break
+    /// note card (T21).
+    func skipNote() {
+        send(.skipNote)
+    }
 
     /// "Ask me later" (T14).
     func askLater() {
         send(.askLater)
     }
 
-    /// "Write note now" in the menu while snoozed (T15).
+    /// "Write note now" in the menu while snoozed (T15) or after skipping the note (T20).
     func writeNoteNow() {
         send(.noteReminder)
     }
 
-    /// "Take a break now" in the menu after saving (T7).
+    /// "Take a break now" in the menu after saving (T7) or skipping (T19) the note.
     func takeBreakNow() {
         send(.takeBreakNow(draft: draft))
     }
@@ -203,10 +226,20 @@ final class SessionController {
         send(.skipBreakConfirmed)
     }
 
-    // MARK: - Sleep and lock (rule 5)
+    // MARK: - Sleep and lock (rule 8)
 
     /// The work timer freezes; the break timer keeps running.
     func systemPaused(_ reason: PauseReason) {
+        addPause(reason)
+    }
+
+    /// Sets a new work end time; if the break ended while away, "Break's over" opens right away.
+    func systemResumed(_ reason: PauseReason) {
+        if removePause(reason) { tick() }
+    }
+
+    /// The first reason freezes the work timer at the time left.
+    private func addPause(_ reason: PauseReason) {
         let wasPaused = !pauseReasons.isEmpty
         pauseReasons.insert(reason)
         guard !wasPaused else { return }
@@ -217,15 +250,16 @@ final class SessionController {
         }
     }
 
-    /// Sets a new work end time; if the break ended while away, "Break's over" opens right away.
-    func systemResumed(_ reason: PauseReason) {
-        guard pauseReasons.remove(reason) != nil, pauseReasons.isEmpty else { return }
+    /// Removing the last reason sets a new work end time. Returns whether the timer runs again.
+    @discardableResult
+    private func removePause(_ reason: PauseReason) -> Bool {
+        guard pauseReasons.remove(reason) != nil, pauseReasons.isEmpty else { return false }
         now = clock.now
         if let pausedWorkRemaining {
             workDeadline = now.addingTimeInterval(pausedWorkRemaining)
             self.pausedWorkRemaining = nil
         }
-        tick()
+        return true
     }
 
     // MARK: - Effects
@@ -234,6 +268,7 @@ final class SessionController {
         switch effect {
         case .startCycle:
             now = clock.now
+            pauseReasons.remove(.user)
             cycleSettings = settingsProvider()
             breakDeadline = nil
             if pauseReasons.isEmpty {
@@ -254,15 +289,24 @@ final class SessionController {
             breakDeadline = now.addingTimeInterval(cycleSettings.breakDuration)
             workDeadline = nil
             pausedWorkRemaining = nil
+            // A pause from the menu belongs to the work block it was made in.
+            pauseReasons.remove(.user)
 
         case .stopTimers:
             workDeadline = nil
             pausedWorkRemaining = nil
             breakDeadline = nil
+            pauseReasons.remove(.user)
             draft = TodoMarkdown.template
             currentNote = nil
             noteReminderAt = nil
             stopTicking()
+
+        case .pauseWorkTimer:
+            addPause(.user)
+
+        case .resumeWorkTimer:
+            removePause(.user)
 
         case let .openNoteWindow(mode):
             noteReminderAt = nil
@@ -308,8 +352,9 @@ final class SessionController {
             chime.stop()
 
         case .showResumePanel:
-            if let note = currentNote ?? noteStore.latest {
-                presenter?.showResumePanel(note: note)
+            // Only this cycle's note; after a skipped note (T19, T21) there is nothing to show.
+            if let currentNote {
+                presenter?.showResumePanel(note: currentNote)
             }
 
         case .closeResumePanel:

@@ -7,6 +7,8 @@ struct BreakOverlayView: View {
     let session: SessionController
     let settings: SettingsStore
     let showsCard: Bool
+    /// The break-over sound chip opens Settings.
+    let onOpenSettings: () -> Void
 
     var body: some View {
         ZStack {
@@ -35,7 +37,7 @@ struct BreakOverlayView: View {
         case .onBreak:
             BreakCardView(session: session, mode: .running)
         case .breakOver:
-            BreakOverView(session: session, settings: settings)
+            BreakOverView(session: session, settings: settings, onChangeSound: onOpenSettings)
         default:
             EmptyView()
         }

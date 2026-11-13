@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Screen 03b: centered on the main display, editor focused on open. There is no early break here:
 /// "Save" (T3) keeps working until the break starts on time; "Ask me later" (T14) closes it until the
-/// next reminder. Opened from "Edit note" (T8) it only has "Save".
+/// next reminder; "Skip note for this session" (T18) means there is nothing to note this time.
+/// Opened from "Edit note" (T8) it only has "Save".
 struct NoteWindowView: View {
     @Bindable var session: SessionController
     let mode: NoteWindowMode
@@ -42,6 +43,13 @@ struct NoteWindowView: View {
 
     private var actions: some View {
         HStack(spacing: Metrics.NoteWindow.actionSpacing) {
+            if mode == .pending {
+                // Nothing to note this cycle: the break starts on time and no note is saved.
+                Button(L10n.t(.noteWindowActionSkip)) {
+                    session.skipNote()
+                }
+                .buttonStyle(.pausieGhost)
+            }
             Spacer(minLength: 0)
             if mode == .pending {
                 // Not ready yet: the window comes back at 3 and 1 min left, then the break screen asks.

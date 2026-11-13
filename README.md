@@ -4,7 +4,7 @@ A macOS menu bar break app. Pausie counts the work session, asks you to note whe
 5 min before the break, enforces the break with a dimmed screen, and gives your note back as a
 markdown todo list when you return.
 
-**Work (50 min) → note in the last 5 min ("Save" or "Ask me later") → break (10 min) → "Let's go!" → see and copy the note → new cycle**
+**Work (50 min) → note in the last 5 min ("Save", "Ask me later" or "Skip") → break (10 min) → "Let's go!" → see and copy the note → new cycle**
 
 Built from the *Pausie MVP Spec* (behavior), the Figma file (visuals) and the *MVP Implementation
 Guide* (structure). Where the app intentionally differs from them, the decision is recorded in
@@ -63,13 +63,13 @@ Add `TEST_RUNNER_PAUSIE_REPRO_NOTES=/path/to/notes.json` to also open every note
 | Folder | Contents |
 | --- | --- |
 | `Pausie/App` | `@main` app, `AppDelegate`, `AppCoordinator` (object graph, applies UI effects) |
-| `Pausie/Core` | `SessionState` / `SessionEvent` / `SessionEffect`, the pure `SessionMachine` reducer (T1–T13), `SessionController` (timers, sleep/lock, settings snapshot) |
-| `Pausie/Data` | `Settings` + `SettingsStore` (UserDefaults), `Note` + `TodoMarkdown`, `NoteStore` (last 5 notes in `~/Library/Application Support/Pausie/notes.json`) |
-| `Pausie/System` | `SystemEvents` (sleep, wake, lock, displays), `ChimePlayer` |
+| `Pausie/Core` | `SessionState` / `SessionEvent` / `SessionEffect`, the pure `SessionMachine` reducer (T1–T21), `SessionController` (timers, pause, sleep/lock, settings snapshot) |
+| `Pausie/Data` | `Settings` + `SettingsStore` (UserDefaults), `BreakSound` (the sound catalog), `Note` + `TodoMarkdown`, `NoteStore` (last 5 notes in `~/Library/Application Support/Pausie/notes.json`) |
+| `Pausie/System` | `SystemEvents` (sleep, wake, lock, displays), `ChimePlayer` (break-over sound and Settings previews) |
 | `Pausie/UI` | Status item + menu, note window, break layer, resume panel, settings, shared components |
 | `Pausie/Theme` | `ColorTokens` (Figma `Pausie` collection), `TypographyTokens`, `Metrics` (every size from Figma), `AppearanceController` |
 | `Pausie/Localization` | `L10n` + `L10nKey`, `TimeFormat` (system-locale time formats) |
-| `Pausie/Resources` | `Localization/en.json`, `Assets.xcassets` (poses, menu bar template, app icon) |
+| `Pausie/Resources` | `Localization/en.json`, `Assets.xcassets` (poses, menu bar template, app icon), `Sounds/` (public-domain music, credits in [docs/SOUNDS.md](docs/SOUNDS.md)) |
 | `Design/AppIcon` | Icon Composer source layers |
 
 ### Rules the code protects
@@ -89,13 +89,14 @@ Add `TEST_RUNNER_PAUSIE_REPRO_NOTES=/path/to/notes.json` to also open every note
    `Assets.xcassets/AppIcon.appiconset` (the target's App Icon name is already `AppIcon`).
 2. **On-device checks** that can't be automated here: break layer over full-screen apps and on a
    second display, menu bar reachable during a break, typing into the note window and the
-   required-note editor, sleep/lock behavior, the chime.
+   required-note editor, sleep/lock behavior, the break-over sounds.
 
 ## Flow and decisions
 
-- [docs/FLOW.md](docs/FLOW.md): the behavior as built: states, transitions (T1–T15), rules, and what
+- [docs/FLOW.md](docs/FLOW.md): the behavior as built: states, transitions (T1–T21), rules, and what
   each screen and the menu show in every state.
 - [docs/DECISIONS.md](docs/DECISIONS.md): every intentional difference from the spec, the guide and
   Figma, with date, who asked for it, why, and the commit.
+- [docs/SOUNDS.md](docs/SOUNDS.md): where each bundled music clip comes from and its license.
 
 When behavior changes, update FLOW.md and add a DECISIONS.md entry in the same commit.

@@ -19,7 +19,7 @@ final class AppCoordinator {
     init() {
         let settingsStore = SettingsStore()
         let noteStore = NoteStore()
-        let chime = ChimePlayer()
+        let chime = ChimePlayer(sound: { settingsStore.settings.breakSound })
         let session = SessionController(
             settings: { settingsStore.settings },
             noteStore: noteStore,
@@ -31,7 +31,7 @@ final class AppCoordinator {
         self.session = session
         noteWindow = NoteWindowController(session: session)
         breakOverlay = BreakOverlayController(session: session, settings: settingsStore)
-        settingsWindow = SettingsWindowController(store: settingsStore)
+        settingsWindow = SettingsWindowController(store: settingsStore, player: chime)
     }
 
     func start() {
@@ -43,6 +43,7 @@ final class AppCoordinator {
         systemEvents.onPause = { [weak self] in self?.session.systemPaused($0) }
         systemEvents.onResume = { [weak self] in self?.session.systemResumed($0) }
         systemEvents.onScreensChanged = { [weak self] in self?.breakOverlay.rebuildIfVisible() }
+        breakOverlay.onOpenSettings = { [weak self] in self?.settingsWindow.show() }
         systemEvents.start()
 
         statusItem = StatusItemController(session: session, noteStore: noteStore, actions: self)
@@ -73,7 +74,7 @@ extension AppCoordinator: SessionPresenting {
     }
 
     func showResumePanel(note: Note) {
-        resumePanel.show(note: note)
+        resumePanel.show(note: note, origin: .breakEnded)
     }
 
     func closeResumePanel() {
@@ -88,7 +89,7 @@ extension AppCoordinator: StatusMenuActions {
     }
 
     func showRecentNote(_ note: Note) {
-        resumePanel.show(note: note)
+        resumePanel.show(note: note, origin: .recentNotes)
     }
 
     func showSettings() {

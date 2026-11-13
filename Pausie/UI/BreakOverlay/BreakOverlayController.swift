@@ -8,6 +8,8 @@ final class BreakOverlayController {
     private let session: SessionController
     private let settings: SettingsStore
     private var panels: [OverlayPanel] = []
+    /// Opens Settings (above the break layer) from the break-over sound chip.
+    var onOpenSettings: () -> Void = {}
 
     init(session: SessionController, settings: SettingsStore) {
         self.session = session
@@ -62,7 +64,10 @@ final class BreakOverlayController {
             panel.hidesOnDeactivate = false
             panel.isReleasedWhenClosed = false
             panel.isMovable = false
-            panel.contentView = NSHostingView(rootView: BreakOverlayView(session: session, settings: settings, showsCard: showsCard))
+            let view = BreakOverlayView(session: session, settings: settings, showsCard: showsCard) { [weak self] in
+                self?.onOpenSettings()
+            }
+            panel.contentView = NSHostingView(rootView: view)
             panel.setFrame(Self.frameBelowMenuBar(screen), display: false)
             return panel
         }

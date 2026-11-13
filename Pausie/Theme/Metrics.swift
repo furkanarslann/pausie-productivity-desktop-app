@@ -68,6 +68,27 @@ enum Icon {
     static let plus = "plus"
     static let chime = "music.note"
     static let checkmark = "checkmark"
+    /// Break-over sound chip: it opens Settings.
+    static let disclosure = "chevron.right"
+    static let previewPlay = "play.fill"
+    static let previewStop = "stop.fill"
+    /// Next to the menu bar countdown while paused from the menu.
+    static let paused = "pause.fill"
+
+    /// Status item menu rows.
+    enum Menu {
+        static let start = "play"
+        static let pause = "pause"
+        static let resume = "play"
+        static let stop = "stop"
+        static let writeNote = "square.and.pencil"
+        static let takeBreakNow = "cup.and.saucer"
+        static let editNote = "pencil"
+        static let skipBreak = "forward.end"
+        static let recentNotes = "clock.arrow.circlepath"
+        static let settings = "gearshape"
+        static let quit = "power"
+    }
 }
 
 enum Metrics {
@@ -113,6 +134,9 @@ enum Metrics {
         static let iconHeight: CGFloat = 16
         static let spacing: CGFloat = 6
         static let horizontalPadding: CGFloat = 6
+        /// The pause sign before the countdown while paused.
+        static let pausedIconSize: CGFloat = 8
+        static let pausedSpacing: CGFloat = 3
     }
 
     /// Status item menu (screens 01, 02).
@@ -161,6 +185,9 @@ enum Metrics {
         static let backToWorkPoseSize = CGSize(width: 180, height: 207)
         static let chipSpacing: CGFloat = 6
         static let chipPadding = EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+        static let chipDisclosureSize: CGFloat = 9
+        /// Space between "Save note & start break" and "Skip note & start break".
+        static let requiredActionSpacing: CGFloat = 2
     }
 
     /// Screen 06.
@@ -203,6 +230,8 @@ enum Metrics {
         static let rowSpacing: CGFloat = 12
         static let infoPadding = EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12)
         static let actionSpacing: CGFloat = 8
+        /// Between the sound picker and its preview button.
+        static let soundControlSpacing: CGFloat = 8
     }
 
     enum Stepper {

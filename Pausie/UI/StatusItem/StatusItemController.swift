@@ -18,7 +18,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let noteStore: NoteStore
     private weak var actions: StatusMenuActions?
     private var isMenuOpen = false
-    private var builtForState: SessionState?
+    /// What the open menu was built for; Pause and Resume swap rows without a state change.
+    private struct BuiltFor: Equatable {
+        let state: SessionState
+        let isPaused: Bool
+    }
+    private var builtFor: BuiltFor?
     private var label: PassthroughHostingView<StatusItemLabel>?
 
     init(session: SessionController, noteStore: NoteStore, actions: StatusMenuActions) {
@@ -58,16 +63,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     /// The label view animates itself; here the item's width follows it and VoiceOver gets the time.
     private func updateTitle() {
-        let title = MenuPresentation(session: session).title
-        statusItem.button?.setAccessibilityValue(title)
+        let presentation = MenuPresentation(session: session)
+        statusItem.button?.setAccessibilityValue(presentation.accessibilityValue)
         if let label {
             statusItem.length = label.fittingSize.width.rounded(.up)
         }
     }
 
     private func rebuildIfStateChangedWhileOpen() {
-        let state = session.state
-        guard isMenuOpen, state != builtForState else { return }
+        let built = BuiltFor(state: session.state, isPaused: session.isPausedByUser)
+        guard isMenuOpen, built != builtFor else { return }
         rebuildMenu()
     }
 
@@ -87,7 +92,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     private func rebuildMenu() {
         let presentation = MenuPresentation(session: session)
-        builtForState = session.state
+        builtFor = BuiltFor(state: session.state, isPaused: session.isPausedByUser)
         menu.removeAllItems()
         menu.addItem(headerItem())
         for row in presentation.rows {
@@ -108,37 +113,50 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         case .separator:
             return .separator()
         case .start:
-            return actionItem(.menuItemStart, #selector(start), key: "s")
+            return actionItem(.menuItemStart, #selector(start), icon: Icon.Menu.start, key: "s")
+        case .pause:
+            return actionItem(.menuItemPause, #selector(pause), icon: Icon.Menu.pause, key: "p")
+        case .resume:
+            return actionItem(.menuItemResume, #selector(resume), icon: Icon.Menu.resume, key: "p")
         case .stop:
-            return actionItem(.menuItemStop, #selector(stop))
+            return actionItem(.menuItemStop, #selector(stop), icon: Icon.Menu.stop)
         case .writeNote:
-            return actionItem(.menuItemWriteNote, #selector(writeNote))
+            return actionItem(.menuItemWriteNote, #selector(writeNote), icon: Icon.Menu.writeNote)
         case .takeBreakNow:
-            return actionItem(.menuItemTakeBreakNow, #selector(takeBreakNow))
+            return actionItem(.menuItemTakeBreakNow, #selector(takeBreakNow), icon: Icon.Menu.takeBreakNow)
         case .editNote:
-            return actionItem(.menuItemEditNote, #selector(editNote))
+            return actionItem(.menuItemEditNote, #selector(editNote), icon: Icon.Menu.editNote)
         case .skipBreak:
-            return actionItem(.menuItemSkipBreak, #selector(skipBreak))
+            return actionItem(.menuItemSkipBreak, #selector(skipBreak), icon: Icon.Menu.skipBreak)
         case .recentNotes:
             let item = NSMenuItem(title: L10n.t(.menuItemRecentNotes), action: nil, keyEquivalent: "")
+            item.image = Self.symbol(Icon.Menu.recentNotes)
             item.submenu = RecentNotesMenu.make(notes: noteStore.notes, target: self, action: #selector(openRecentNote(_:)))
             return item
         case .settings:
-            return actionItem(.menuItemSettings, #selector(openSettings), key: ",")
+            return actionItem(.menuItemSettings, #selector(openSettings), icon: Icon.Menu.settings, key: ",")
         case .quit:
-            return actionItem(.menuItemQuit, #selector(quit), key: "q")
+            return actionItem(.menuItemQuit, #selector(quit), icon: Icon.Menu.quit, key: "q")
         }
     }
 
-    private func actionItem(_ key: L10nKey, _ action: Selector, key equivalent: String = "") -> NSMenuItem {
+    private func actionItem(_ key: L10nKey, _ action: Selector, icon: String, key equivalent: String = "") -> NSMenuItem {
         let item = NSMenuItem(title: L10n.t(key), action: action, keyEquivalent: equivalent)
         item.target = self
+        item.image = Self.symbol(icon)
         return item
+    }
+
+    /// SF Symbols are template images, so they follow the menu's text color and highlight.
+    private static func symbol(_ name: String) -> NSImage? {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil)
     }
 
     // MARK: - Actions
 
     @objc private func start() { session.send(.start) }
+    @objc private func pause() { session.pause() }
+    @objc private func resume() { session.resume() }
     @objc private func stop() { session.send(.stop) }
     @objc private func writeNote() { session.writeNoteNow() }
     @objc private func takeBreakNow() { session.takeBreakNow() }

@@ -12,6 +12,8 @@ struct Settings: Codable, Equatable, Sendable {
     /// At least 1.
     var breakMinutes = 10
     var appearance: AppearancePreference = .system
+    /// Plays when a break ends.
+    var breakSound: BreakSound = .default
 
     static let `default` = Settings()
 
@@ -32,4 +34,21 @@ struct Settings: Codable, Equatable, Sendable {
 
     var workDuration: TimeInterval { TimeInterval(workMinutes * 60) }
     var breakDuration: TimeInterval { TimeInterval(breakMinutes * 60) }
+}
+
+extension Settings {
+    private enum CodingKeys: String, CodingKey {
+        case workMinutes, breakMinutes, appearance, breakSound
+    }
+
+    /// Each field falls back to its default on its own, so settings saved before a field existed (or
+    /// naming a sound that was removed) keep everything else.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Settings()
+        workMinutes = (try? container.decodeIfPresent(Int.self, forKey: .workMinutes)) ?? defaults.workMinutes
+        breakMinutes = (try? container.decodeIfPresent(Int.self, forKey: .breakMinutes)) ?? defaults.breakMinutes
+        appearance = (try? container.decodeIfPresent(AppearancePreference.self, forKey: .appearance)) ?? defaults.appearance
+        breakSound = (try? container.decodeIfPresent(BreakSound.self, forKey: .breakSound)) ?? defaults.breakSound
+    }
 }

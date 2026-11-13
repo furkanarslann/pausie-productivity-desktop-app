@@ -17,11 +17,13 @@ final class ResumePanelController {
     var isVisible: Bool { panel?.isVisible == true }
     var frame: NSRect? { panel?.frame }
 
-    func show(note: Note) {
+    func show(note: Note, origin: ResumePanelOrigin) {
         let panel = panel ?? makePanel()
         self.panel = panel
+        panel.title = L10n.t(origin.titleKey)
         let view = ResumePanelView(
             note: note,
+            origin: origin,
             onClose: { [weak self] in self?.close() },
             onHoverChange: { [weak self] hovering in
                 guard let self, isVisible else { return }
@@ -50,7 +52,6 @@ final class ResumePanelController {
             backing: .buffered,
             defer: false
         )
-        panel.title = L10n.t(.resumeTitle)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         // The system shadow follows the rounded content.
