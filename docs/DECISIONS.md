@@ -7,8 +7,9 @@ as a whole is in [FLOW.md](FLOW.md).
 The *Pausie MVP Spec* doc was brought in line with D1–D13 on 2026-11-10 (states, transitions T1–T15,
 rules, screens, the state diagram, and a "Kararlar (4. tur, uygulama sırasında)" section); D14 was added
 to that section the same day. D15–D18 went in on 2026-11-13: the `PRE_BREAK_SKIPPED` state, T16–T21,
-rules, screens, a redrawn state diagram, and rows 15–18 of that section. Keep both in step: a new
-decision goes here and into the spec.
+rules, screens, a redrawn state diagram, and rows 15–18 of that section. D19–D20 went in on
+2026-11-16: T22, rule 16, the states, screens and settings text, a note under the diagram (T22 isn't
+drawn), and rows 19–20 of that section. Keep both in step: a new decision goes here and into the spec.
 
 Add an entry whenever behavior changes on purpose: newest at the bottom, one entry per decision, and
 mark entries that a later decision replaced instead of deleting them.

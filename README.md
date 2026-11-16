@@ -94,7 +94,7 @@ Add `TEST_RUNNER_PAUSIE_REPRO_NOTES=/path/to/notes.json` to also open every note
 
 ## Flow and decisions
 
-- [docs/FLOW.md](docs/FLOW.md): the behavior as built: states, transitions (T1–T21), rules, and what
+- [docs/FLOW.md](docs/FLOW.md): the behavior as built: states, transitions (T1–T22), rules, and what
   each screen and the menu show in every state.
 - [docs/DECISIONS.md](docs/DECISIONS.md): every intentional difference from the spec, the guide and
   Figma, with date, who asked for it, why, and the commit.
