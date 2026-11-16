@@ -39,4 +39,7 @@ enum SessionEffect: Equatable, Sendable {
     case stopChime
     case showResumePanel
     case closeResumePanel
+    /// "Snooze for 5 min" (T22): clear the break timer and give `SessionRules.breakPostpone` more work time;
+    /// it can't be used again this cycle.
+    case postponeBreak
 }

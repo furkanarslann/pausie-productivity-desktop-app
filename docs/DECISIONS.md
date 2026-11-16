@@ -128,6 +128,8 @@ technical choice made while building, within the spec's intent.
   out. Furkan chose the edge over a darker fill from 1x mockups.
 
 ### D15 · Break-over sound: public-domain music or a macOS chime, picked in Settings
+- **Superseded in part by D20:** the four classical recordings were replaced by upbeat music written for
+  Pausie. The rest of this decision stands.
 - **Date:** 2026-11-13 · **Requested by:** Furkan · **Commit:** the commit that mentions D15
   (`git log --grep D15`)
 - **Decision:**
@@ -190,3 +192,36 @@ technical choice made while building, within the spec's intent.
   last 5 notes." with the thinking pose. The todos, copy button, footer and auto-close are the same.
 - **Supersedes:** Figma screen 08's single header ("Welcome back!"), used for both until now.
 - **Why:** The panel also opens from Recent notes, often mid-session, where "Welcome back!" doesn't fit.
+
+### D19 · Snooze a break for 5 min, once per cycle
+- **Date:** 2026-11-16 · **Requested by:** Furkan · **Commit:** the commit that mentions D19
+  (`git log --grep D19`)
+- **Decision:**
+  - The break note card and the running break card have "Snooze for 5 min". It hides the break layer
+    and gives 5 more minutes of work; then the break starts again from the beginning, with its full
+    length (T22).
+  - It works once per cycle: the button is gone after it is used and comes back with the next cycle.
+    It isn't offered on the break-over card or in the menu.
+  - A saved note stays saved (`preBreakNoted`) and a skipped one stays skipped (`preBreakSkipped`).
+    Snoozed from the note card, the cycle goes to `preBreakSnoozed` with no "Ask me later" reminders,
+    so the 5 min aren't interrupted; anything typed on the card is kept and saved at time up (T5).
+- **Supersedes:** Spec rule 2 as the only way out of a running break was "Skip break…"; the spec and
+  Figma had no way to postpone a break.
+- **Why:** The break screen can arrive in the middle of a task; 5 minutes to finish it is better than
+  skipping the break.
+
+### D20 · Upbeat music written for Pausie instead of the classical clips
+- **Date:** 2026-11-16 · **Requested by:** Furkan · **Commit:** the commit that mentions D20
+  (`git log --grep D20`)
+- **Decision:**
+  - The *Music* section of "Break sound" has four upbeat tracks: Morning Marimba, Ukulele Bounce,
+    Rise & Shine and Happy Groove. They replace the Satie, Schumann, Bach and Chopin recordings.
+  - The tracks were composed for Pausie and synthesized from code (`Tools/BreakMusic`), with no
+    samples or third-party recordings, so they are royalty-free by construction. Each is 55 s, starts
+    on its hook like an alarm, and keeps the earlier loudness (−18 LUFS, −3 dB true peak), with little
+    high-frequency energy and soft percussion so it doesn't grate.
+  - A setting that still names a classical clip plays Morning Marimba, so a user who picked music keeps
+    music. "Glass" stays the default.
+- **Supersedes:** The music part of D15.
+- **Why:** Furkan found the classical pieces too heavy for the end of a break and wanted something
+  energetic and alarm-like that is still easy on the ears.

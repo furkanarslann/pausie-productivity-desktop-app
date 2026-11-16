@@ -21,7 +21,7 @@ struct SoundTests {
 
     @Test("Settings list music first, then the macOS chimes; the default is Glass")
     func catalog() {
-        #expect(BreakSound.music == [.gymnopedie, .traumerei, .preludeInC, .nocturne])
+        #expect(BreakSound.music == [.morningMarimba, .ukuleleBounce, .riseAndShine, .happyGroove])
         #expect(BreakSound.chimes.first == .glass)
         #expect(BreakSound.default == .glass)
         #expect(Settings().breakSound == .glass)
@@ -45,15 +45,24 @@ struct SoundTests {
         #expect(settings.breakSound == .glass)
     }
 
+    @Test("A setting naming a retired classical clip keeps music: it gets the first new track (D20)",
+          arguments: ["gymnopedie", "traumerei", "preludeInC", "nocturne"])
+    func decodeRetiredMusic(stored: String) throws {
+        let json = #"{"workMinutes":30,"breakMinutes":10,"appearance":"light","breakSound":"\#(stored)"}"#
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        #expect(settings.breakSound == .morningMarimba)
+        #expect(settings.workMinutes == 30)
+    }
+
     @Test("The sound applies at once and is saved")
     func storeSavesSound() throws {
         let suite = "PausieSoundTests-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = SettingsStore(defaults: defaults)
-        store.setBreakSound(.nocturne)
-        #expect(store.settings.breakSound == .nocturne)
-        #expect(SettingsStore(defaults: defaults).settings.breakSound == .nocturne)
+        store.setBreakSound(.happyGroove)
+        #expect(store.settings.breakSound == .happyGroove)
+        #expect(SettingsStore(defaults: defaults).settings.breakSound == .happyGroove)
     }
 
     @Test("Stopping a preview leaves the break-over sound alone")

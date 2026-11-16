@@ -60,4 +60,7 @@ enum SessionRules {
     static let soundPreviewDuration: TimeInterval = 15
     /// Music fades out over this long when its preview ends.
     static let soundPreviewFadeOut: TimeInterval = 1
+    /// "Snooze for 5 min" on a break card (T22) gives this much more work time, once per cycle.
+    static let breakPostponeMinutes = 5
+    static var breakPostpone: TimeInterval { TimeInterval(breakPostponeMinutes * 60) }
 }

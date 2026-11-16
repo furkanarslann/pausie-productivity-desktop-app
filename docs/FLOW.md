@@ -28,7 +28,7 @@ this session" → break starts on time → "Let's go!" → see and copy the note
 | `idle` | App open, no timer | Menu bar icon only |
 | `working` | A cycle is running, more than 5 min left | Countdown in the menu bar; the resume panel if you just came back |
 | `preBreakPending` | 5 min left (or a reminder fired), no note saved | Note window, centered, editor focused |
-| `preBreakSnoozed` | "Ask me later" was pressed | Countdown only; the note window comes back at 3 and 1 min left |
+| `preBreakSnoozed` | "Ask me later" was pressed, or the note card was snoozed (T22) | Countdown only; after "Ask me later" the note window comes back at 3 and 1 min left |
 | `preBreakNoted` | The note was saved; work goes on | Countdown; menu offers "Take a break now" and "Edit note" |
 | `preBreakSkipped` | "Skip note for this session" was pressed; work goes on | Countdown; menu offers "Take a break now" and "Write note now" |
 | `breakNoteRequired` | Work time ended with nothing written | Dimmed screen + note card; the break timer has not started |
@@ -40,7 +40,7 @@ the four `preBreak*` states) and the state stays as it is until "Resume" (T16, T
 
 ## Transitions
 
-Numbers follow the spec. T4 ("Save & take a break") was removed; T14 to T21 are new.
+Numbers follow the spec. T4 ("Save & take a break") was removed; T14 to T22 are new.
 
 | # | From | Event (trigger) | To | Effects |
 | --- | --- | --- | --- | --- |
@@ -65,6 +65,8 @@ Numbers follow the spec. T4 ("Save & take a break") was removed; T14 to T21 are 
 | T19 | preBreakSkipped | work time up, or "Take a break now" (menu) | onBreak | show break card, start break timer; nothing is saved |
 | T20 | preBreakSkipped | "Write note now" (menu) | preBreakPending | open note window (pending) with anything typed before |
 | T21 | breakNoteRequired | "Skip note & start break" | onBreak | start break timer; nothing is saved |
+| T22 | breakNoteRequired | "Snooze for 5 min" (once per cycle) | preBreakSnoozed | hide break layer; 5 min of work with no reminders, then time up asks again (T5) |
+| T22 | onBreak | "Snooze for 5 min" (once per cycle) | preBreakNoted, or preBreakSkipped if the note was skipped | hide break layer, drop the break timer; 5 min of work, then the break starts from the beginning (T6, T19) |
 
 Any other (state, event) pair is ignored and logged.
 
@@ -100,6 +102,11 @@ Any other (state, event) pair is ignored and logged.
     time up until "Resume"; sleep and lock don't end it, and the timer runs again only when nothing
     else (sleep, lock) holds it. A pause ends with its work block: taking a break or "Stop session"
     clears it, so the next cycle starts running. A running break can't be paused.
+13. **"Snooze for 5 min"** on the break cards (note card and running break) works once per cycle: the
+    break layer goes away and work goes on for 5 min, then the break starts again from the beginning
+    with its full length. A saved or skipped note stays as it is; with no note yet, nothing reminds
+    in between and the note card comes back at time up. The button is gone after it is used, and
+    comes back with the next cycle.
 
 ## Notes
 
@@ -163,8 +170,8 @@ Clicking the empty part of the editor continues the last todo.
 
 | State | Card |
 | --- | --- |
-| breakNoteRequired | Note card: editor + "Save note & start break" (⌘Return) + "Skip note & start break" |
-| onBreak | Relaxed pose in a ring showing the time left, a speech bubble, timer, "Break ends at HH:mm", disabled "Let's go!" |
+| breakNoteRequired | Note card: editor + "Save note & start break" (⌘Return) + "Skip note & start break" + "Snooze for 5 min" |
+| onBreak | Relaxed pose in a ring showing the time left, a speech bubble, timer, "Break ends at HH:mm", disabled "Let's go!", "Snooze for 5 min" |
 | onBreak + "Skip break…" | Confirmation on top: "Skip break" / "Keep resting" (default) |
 | breakOver | "Break's over!", sound chip, "Let's go!" (default), "Starts your next N min session" |
 
@@ -191,8 +198,8 @@ after 15 s (paused while the pointer is over it), on "Close", or at the next 5-m
 Work and break steppers (apply on Save, from the next cycle); break sound; appearance picker (applies
 at once).
 
-**Break sound** is a menu with two sections: *Music* (Gymnopédie No. 1, Träumerei, Prelude in C,
-Nocturne: public-domain recordings bundled in the app, see [SOUNDS.md](SOUNDS.md)) and *macOS sounds*
+**Break sound** is a menu with two sections: *Music* (Morning Marimba, Ukulele Bounce, Rise & Shine,
+Happy Groove: upbeat tracks written for Pausie and bundled in the app, see [SOUNDS.md](SOUNDS.md)) and *macOS sounds*
 (Glass, Hero, Ping, Purr, Submarine, Tink, Bottle, Blow). Picking one saves it at once and plays a
 preview (music: at most 15 s, then a 1 s fade). The ▶ / ■ button next to it plays or stops the
 preview. A preview stops the break-over sound if it is playing, and stops when Settings closes.

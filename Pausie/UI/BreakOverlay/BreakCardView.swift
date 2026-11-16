@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Screen 04 (`.noteRequired`, with "Skip note & start break", T21) and screen 05 (`.running`).
+/// Both offer "Snooze for 5 min" (T22) once per cycle.
 struct BreakCardView: View {
     enum Mode {
         case noteRequired
@@ -42,6 +43,7 @@ struct BreakCardView: View {
                     session.skipNote()
                 }
                 .buttonStyle(.pausieGhost)
+                postponeButton
             }
         }
         .padding(Metrics.BreakCard.padding)
@@ -74,9 +76,25 @@ struct BreakCardView: View {
             Text(L10n.t(.breakActionDisabledHint))
                 .typography(.caption)
                 .foregroundStyle(Color(.textSecondary))
+            postponeButton
         }
         .padding(Metrics.BreakCard.padding)
         .frame(width: Metrics.BreakCard.width)
         .pausieSurface(radius: Radius.lg)
+    }
+
+    // MARK: - Snooze (T22)
+
+    /// Gone once used: the break can be snoozed once per cycle.
+    @ViewBuilder
+    private var postponeButton: some View {
+        if !session.hasPostponedBreak {
+            let minutes = ["minutes": String(SessionRules.breakPostponeMinutes)]
+            Button(L10n.t(.breakActionPostpone, minutes)) {
+                session.postponeBreak()
+            }
+            .buttonStyle(.pausieGhost)
+            .help(L10n.t(.breakActionPostponeHelp, minutes))
+        }
     }
 }

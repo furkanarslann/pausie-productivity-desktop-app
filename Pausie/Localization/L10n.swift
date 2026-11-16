@@ -58,6 +58,8 @@ enum L10nKey: String, CaseIterable, Sendable {
     case breakEndsAt = "break.endsAt"
     case breakActionLetsGo = "break.action.letsGo"
     case breakActionDisabledHint = "break.action.disabledHint"
+    case breakActionPostpone = "break.action.postpone"
+    case breakActionPostponeHelp = "break.action.postpone.help"
 
     case skipBreakTitle = "skipBreak.title"
     case skipBreakBody = "skipBreak.body"
@@ -103,10 +105,10 @@ enum L10nKey: String, CaseIterable, Sendable {
     case settingsActionCancel = "settings.action.cancel"
     case settingsActionSave = "settings.action.save"
 
-    case soundGymnopedie = "sound.gymnopedie"
-    case soundTraumerei = "sound.traumerei"
-    case soundPreludeInC = "sound.preludeInC"
-    case soundNocturne = "sound.nocturne"
+    case soundMorningMarimba = "sound.morningMarimba"
+    case soundUkuleleBounce = "sound.ukuleleBounce"
+    case soundRiseAndShine = "sound.riseAndShine"
+    case soundHappyGroove = "sound.happyGroove"
     case soundGlass = "sound.glass"
     case soundHero = "sound.hero"
     case soundPing = "sound.ping"

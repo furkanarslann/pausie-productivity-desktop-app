@@ -53,6 +53,8 @@ final class SessionController {
     private(set) var pauseReasons: Set<PauseReason> = []
     /// After "Ask me later": the note window comes back when this much work time is left.
     private(set) var noteReminderAt: TimeInterval?
+    /// "Snooze for 5 min" was used in this cycle (T22); it can be used once.
+    private(set) var hasPostponedBreak = false
 
     @ObservationIgnored weak var presenter: SessionPresenting?
     @ObservationIgnored private let clock: SessionClock
@@ -113,6 +115,11 @@ final class SessionController {
 
     var breakEndsAt: Date? {
         state == .onBreak ? breakDeadline : nil
+    }
+
+    /// The break cards offer "Snooze for 5 min" once per cycle (T22).
+    var canPostponeBreak: Bool {
+        (state == .breakNoteRequired || state == .onBreak) && !hasPostponedBreak && !isSkipConfirmationPresented
     }
 
     /// Elapsed share of the work block, 0...1, for the menu header progress bar.
@@ -206,6 +213,14 @@ final class SessionController {
         send(.editNote)
     }
 
+    // MARK: - Snooze the break (T22)
+
+    /// "Snooze for 5 min" on a break card: 5 more minutes of work, then the break starts again.
+    func postponeBreak() {
+        guard canPostponeBreak else { return }
+        send(.postponeBreak(noteSkipped: !hasNoteThisCycle))
+    }
+
     // MARK: - Skip break (T12)
 
     /// "Skip break…" in the menu: asks for confirmation first.
@@ -281,6 +296,7 @@ final class SessionController {
             draft = TodoMarkdown.template
             currentNote = nil
             noteReminderAt = nil
+            hasPostponedBreak = false
             isSkipConfirmationPresented = false
             startTicking()
 
@@ -300,6 +316,7 @@ final class SessionController {
             draft = TodoMarkdown.template
             currentNote = nil
             noteReminderAt = nil
+            hasPostponedBreak = false
             stopTicking()
 
         case .pauseWorkTimer:
@@ -359,6 +376,20 @@ final class SessionController {
 
         case .closeResumePanel:
             presenter?.closeResumePanel()
+
+        case .postponeBreak:
+            now = clock.now
+            hasPostponedBreak = true
+            breakDeadline = nil
+            // No "Ask me later" reminders during the 5 min: with no note yet, the break screen asks at time up.
+            noteReminderAt = nil
+            if pauseReasons.isEmpty {
+                workDeadline = now.addingTimeInterval(SessionRules.breakPostpone)
+                pausedWorkRemaining = nil
+            } else {
+                workDeadline = nil
+                pausedWorkRemaining = SessionRules.breakPostpone
+            }
         }
     }
 

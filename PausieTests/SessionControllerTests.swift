@@ -579,6 +579,109 @@ struct SessionControllerTests {
         #expect(h.noteStore.notes.isEmpty)
     }
 
+    // MARK: - Snooze the break (T22)
+
+    @Test("T22: snoozing a running break gives 5 more min of work, then a full break; only once")
+    func postponeRunningBreak() throws {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 45)
+        h.controller.send(.saveNote(markdown: "- [ ] Finish the login screen"))
+        h.advance(minutes: 5)
+        #expect(h.controller.state == .onBreak)
+        #expect(h.controller.canPostponeBreak)
+        h.advance(minutes: 2)
+        h.presenter.reset()
+
+        h.controller.postponeBreak()
+        #expect(h.controller.state == .preBreakNoted)
+        #expect(h.presenter.calls == [.hideBreakOverlay])
+        #expect(h.controller.workRemaining == SessionRules.breakPostpone)
+        #expect(h.controller.breakDeadline == nil)
+        #expect(h.controller.hasPostponedBreak)
+
+        h.advance(seconds: SessionRules.breakPostpone - 1)
+        #expect(h.controller.state == .preBreakNoted)
+        h.advance(seconds: 1)
+        #expect(h.controller.state == .onBreak)
+        // The break starts again from the beginning, with the same note (no second record).
+        #expect(h.controller.breakRemaining == TimeInterval(10 * 60))
+        #expect(h.noteStore.notes.count == 1)
+
+        #expect(!h.controller.canPostponeBreak)
+        h.controller.postponeBreak()
+        #expect(h.controller.state == .onBreak)
+    }
+
+    @Test("T22: snoozing the note card brings no reminders; the break screen asks again at time up")
+    func postponeNoteCard() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 50)
+        #expect(h.controller.state == .breakNoteRequired)
+        h.presenter.reset()
+
+        h.controller.postponeBreak()
+        #expect(h.controller.state == .preBreakSnoozed)
+        #expect(h.controller.noteReminderAt == nil)
+        #expect(h.presenter.calls == [.hideBreakOverlay])
+
+        h.advance(minutes: 4)
+        #expect(h.controller.state == .preBreakSnoozed)
+        #expect(!h.presenter.calls.contains(.openNoteWindow(.pending)))
+        h.advance(minutes: 1)
+        #expect(h.controller.state == .breakNoteRequired)
+        #expect(h.controller.breakDeadline == nil)
+        #expect(!h.controller.canPostponeBreak)
+    }
+
+    @Test("T22: notes typed on the note card before snoozing are saved at time up")
+    func postponeNoteCardKeepsDraft() throws {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 50)
+        h.controller.draft = "- [ ] Reply to the review"
+        h.controller.postponeBreak()
+        h.advance(minutes: 5)
+        #expect(h.controller.state == .onBreak)
+        #expect(try #require(h.noteStore.notes.first).markdown == "- [ ] Reply to the review")
+    }
+
+    @Test("T22: a break whose note was skipped stays without a note after snoozing")
+    func postponeSkippedBreak() {
+        let h = SessionHarness()
+        h.controller.send(.start)
+        h.advance(minutes: 50)
+        h.controller.skipNote()
+        h.controller.postponeBreak()
+        #expect(h.controller.state == .preBreakSkipped)
+        h.advance(minutes: 5)
+        #expect(h.controller.state == .onBreak)
+        #expect(h.noteStore.notes.isEmpty)
+    }
+
+    @Test("T22: every cycle gets its own snooze; none while the skip confirmation is open")
+    func postponeOncePerCycle() {
+        let h = SessionHarness(workMinutes: 10, breakMinutes: 1)
+        h.controller.send(.start)
+        h.advance(minutes: 10)
+        h.controller.postponeBreak()
+        h.advance(minutes: 5)
+        h.controller.skipNote()
+        h.advance(minutes: 1)
+        h.controller.send(.letsGo)
+        #expect(!h.controller.hasPostponedBreak)
+
+        h.advance(minutes: 10)
+        h.controller.skipNote()
+        h.controller.requestSkipBreak()
+        #expect(!h.controller.canPostponeBreak)
+        h.controller.postponeBreak()
+        #expect(h.controller.state == .onBreak)
+        h.controller.cancelSkipBreak()
+        #expect(h.controller.canPostponeBreak)
+    }
+
     // MARK: - Derived values
 
     @Test("Work end time and break progress")

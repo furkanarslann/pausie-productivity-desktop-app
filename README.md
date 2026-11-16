@@ -63,14 +63,15 @@ Add `TEST_RUNNER_PAUSIE_REPRO_NOTES=/path/to/notes.json` to also open every note
 | Folder | Contents |
 | --- | --- |
 | `Pausie/App` | `@main` app, `AppDelegate`, `AppCoordinator` (object graph, applies UI effects) |
-| `Pausie/Core` | `SessionState` / `SessionEvent` / `SessionEffect`, the pure `SessionMachine` reducer (T1–T21), `SessionController` (timers, pause, sleep/lock, settings snapshot) |
+| `Pausie/Core` | `SessionState` / `SessionEvent` / `SessionEffect`, the pure `SessionMachine` reducer (T1–T22), `SessionController` (timers, pause, sleep/lock, settings snapshot) |
 | `Pausie/Data` | `Settings` + `SettingsStore` (UserDefaults), `BreakSound` (the sound catalog), `Note` + `TodoMarkdown`, `NoteStore` (last 5 notes in `~/Library/Application Support/Pausie/notes.json`) |
 | `Pausie/System` | `SystemEvents` (sleep, wake, lock, displays), `ChimePlayer` (break-over sound and Settings previews) |
 | `Pausie/UI` | Status item + menu, note window, break layer, resume panel, settings, shared components |
 | `Pausie/Theme` | `ColorTokens` (Figma `Pausie` collection), `TypographyTokens`, `Metrics` (every size from Figma), `AppearanceController` |
 | `Pausie/Localization` | `L10n` + `L10nKey`, `TimeFormat` (system-locale time formats) |
-| `Pausie/Resources` | `Localization/en.json`, `Assets.xcassets` (poses, menu bar template, app icon), `Sounds/` (public-domain music, credits in [docs/SOUNDS.md](docs/SOUNDS.md)) |
+| `Pausie/Resources` | `Localization/en.json`, `Assets.xcassets` (poses, menu bar template, app icon), `Sounds/` (music written for Pausie, see [docs/SOUNDS.md](docs/SOUNDS.md)) |
 | `Design/AppIcon` | Icon Composer source layers |
+| `Tools/BreakMusic` | `compose.swift` writes and synthesizes the break-over music; `render.sh` rebuilds `Pausie/Resources/Sounds` (needs ffmpeg) |
 
 ### Rules the code protects
 

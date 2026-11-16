@@ -182,6 +182,34 @@ struct SessionMachineTests {
         #expect(reduce(state, .skipNote) == nil)
     }
 
+    @Test("T22 breakNoteRequired --postponeBreak--> preBreakSnoozed: 5 more min, no reminders", arguments: [false, true])
+    func t22FromNoteCard(noteSkipped: Bool) {
+        #expect(reduce(.breakNoteRequired, .postponeBreak(noteSkipped: noteSkipped)) == SessionTransition(
+            state: .preBreakSnoozed,
+            effects: [.hideBreakOverlay, .postponeBreak]
+        ))
+    }
+
+    @Test("T22 onBreak --postponeBreak--> back to the work state the note left it in")
+    func t22FromRunningBreak() {
+        #expect(reduce(.onBreak, .postponeBreak(noteSkipped: false)) == SessionTransition(
+            state: .preBreakNoted,
+            effects: [.hideBreakOverlay, .postponeBreak]
+        ))
+        #expect(reduce(.onBreak, .postponeBreak(noteSkipped: true)) == SessionTransition(
+            state: .preBreakSkipped,
+            effects: [.hideBreakOverlay, .postponeBreak]
+        ))
+    }
+
+    @Test("The break can only be snoozed from a break card", arguments: [
+        SessionState.idle, .working, .preBreakPending, .preBreakSnoozed, .preBreakNoted, .preBreakSkipped, .breakOver,
+    ])
+    func postponeOnlyFromBreakCards(state: SessionState) {
+        #expect(reduce(state, .postponeBreak(noteSkipped: false)) == nil)
+        #expect(reduce(state, .postponeBreak(noteSkipped: true)) == nil)
+    }
+
     // MARK: - Rules
 
     @Test("Rule 2: Let's go is ignored while the break is running")

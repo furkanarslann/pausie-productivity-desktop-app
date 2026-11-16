@@ -54,6 +54,8 @@
   "break.endsAt": "Break ends at {time}",
   "break.action.letsGo": "Let's go!",
   "break.action.disabledHint": "Available when the break ends",
+  "break.action.postpone": "Snooze for {minutes} min",
+  "break.action.postpone.help": "Work {minutes} more minutes, then the break starts again. Once per break.",
 
   "skipBreak.title": "Skip this break?",
   "skipBreak.body": "Your note stays saved. A new work session starts right away.",
@@ -99,10 +101,10 @@
   "settings.action.cancel": "Cancel",
   "settings.action.save": "Save",
 
-  "sound.gymnopedie": "Gymnopédie No. 1 (Satie)",
-  "sound.traumerei": "Träumerei (Schumann)",
-  "sound.preludeInC": "Prelude in C (Bach)",
-  "sound.nocturne": "Nocturne (Chopin)",
+  "sound.morningMarimba": "Morning Marimba",
+  "sound.ukuleleBounce": "Ukulele Bounce",
+  "sound.riseAndShine": "Rise & Shine",
+  "sound.happyGroove": "Happy Groove",
   "sound.glass": "Glass",
   "sound.hero": "Hero",
   "sound.ping": "Ping",

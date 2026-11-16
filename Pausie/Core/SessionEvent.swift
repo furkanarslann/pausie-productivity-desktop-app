@@ -37,4 +37,7 @@ enum SessionEvent: Equatable, Sendable {
     case resume
     /// T18 (note window), T21 (break note card): nothing to note this cycle.
     case skipNote
+    /// T22: "Snooze for 5 min" on a break card, once per cycle. `noteSkipped` tells a running break whose
+    /// note was skipped from one whose note was saved; the note card ignores it.
+    case postponeBreak(noteSkipped: Bool)
 }

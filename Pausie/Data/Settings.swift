@@ -49,6 +49,7 @@ extension Settings {
         workMinutes = (try? container.decodeIfPresent(Int.self, forKey: .workMinutes)) ?? defaults.workMinutes
         breakMinutes = (try? container.decodeIfPresent(Int.self, forKey: .breakMinutes)) ?? defaults.breakMinutes
         appearance = (try? container.decodeIfPresent(AppearancePreference.self, forKey: .appearance)) ?? defaults.appearance
-        breakSound = (try? container.decodeIfPresent(BreakSound.self, forKey: .breakSound)) ?? defaults.breakSound
+        breakSound = (try? container.decodeIfPresent(String.self, forKey: .breakSound))
+            .flatMap(BreakSound.init(storedValue:)) ?? defaults.breakSound
     }
 }

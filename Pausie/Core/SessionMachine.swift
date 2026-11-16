@@ -12,7 +12,7 @@ struct SessionTransition: Equatable, Sendable {
 /// Transition numbers follow the spec, with these changes: the note window no longer offers an early
 /// break (T4 removed; "Save" is T3), "Ask me later" and its reminders are T14 and T15, and notes typed so
 /// far are saved when work time runs out (T5, T6) or the break is taken from the menu (T7). Pause and
-/// Resume are T16 and T17; skipping the note for a cycle is T18 to T21.
+/// Resume are T16 and T17; skipping the note for a cycle is T18 to T21; snoozing a break for 5 min is T22.
 enum SessionMachine {
     static func reduce(_ state: SessionState, _ event: SessionEvent) -> SessionTransition? {
         switch (state, event) {
@@ -98,6 +98,15 @@ enum SessionMachine {
         // T21: "Skip note & start break" on the break note card.
         case (.breakNoteRequired, .skipNote):
             return SessionTransition(state: .onBreak, effects: [.showBreakOverlay(.running), .startBreakTimer])
+
+        // T22: "Snooze for 5 min" on a break card (the controller allows it once per cycle). The break layer
+        // goes away and work goes on for 5 min; then the break starts again from the beginning. A saved or
+        // skipped note stays as it was. With no note yet, there are no reminders: the break screen asks
+        // again at time up (T5).
+        case (.breakNoteRequired, .postponeBreak):
+            return SessionTransition(state: .preBreakSnoozed, effects: [.hideBreakOverlay, .postponeBreak])
+        case let (.onBreak, .postponeBreak(noteSkipped)):
+            return SessionTransition(state: noteSkipped ? .preBreakSkipped : .preBreakNoted, effects: [.hideBreakOverlay, .postponeBreak])
 
         default:
             return nil
